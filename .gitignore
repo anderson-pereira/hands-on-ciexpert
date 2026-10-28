@@ -2,3 +2,8 @@
 *build*
 *.log
 *.rpt
+AN.DB/
+64/
+csrc/
+simv*
+ucli.key

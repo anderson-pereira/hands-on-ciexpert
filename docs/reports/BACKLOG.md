@@ -45,12 +45,12 @@ Para assegurar clareza e precisão na documentação, a tabela abaixo consolida 
 **Objetivo:** Garantir a prontidão do ambiente de desenvolvimento, fluxo automatizado e mapear o contrato de hardware (interfaces, registradores e isolamento de domínios).
 
 - [x] **Task 1.1:** Preparar ambiente base com estrutura de diretórios, automação via Makefile (checagem estática de *Lint*, simulação funcional, síntese lógica, equivalência formal e suporte a UPF) e relatório técnico da Semana 1.
-- [ ] **Task 1.2:** Desenhar o diagrama de blocos de alto nível mapeando as partições internas do sistema: `SPI IF` (*SPI Interface*), `CDC` (*Clock Domain Crossing*), `FSM SPI` (máquina de estados do protocolo SPI), `Controlador/CSR` (*Control and Status Registers*), núcleo criptográfico `AES`, subsistema de `Memória`, gerador de `RESET` e `PLL` (*Phase-Locked Loop*).
-- [ ] **Task 1.3:** Especificar a tabela de Mapa de Registradores CSR (*Control and Status Registers*) acessíveis via barramento SPI (endereçamento, bitfields, permissões RW/RO — *Read-Write / Read-Only*, flags de status e comandos de controle).
-- [ ] **Task 1.4:** Definir a estratégia e arquitetura de Clock/Reset, explicitando os mecanismos de travessia assíncrona CDC (*Clock Domain Crossing*) entre o domínio serial `SCLK` (SPI) e o domínio de sistema `clk_sys` gerado pelo PLL.
-- [ ] **Task 1.5:** Formalizar contratos e interfaces físicas de I/O (*Input/Output*, larguras de barramento, sinais de handshake) para os modelos de apoio em simulação (mock de Memória e mock de PLL com sinal de travamento `locked`).
-- [ ] **Task 1.6:** Definir a microarquitetura do núcleo AES (arquitetura iterativa por rodada, sub-rotinas de transformação criptográfica e interfaces de controle com CSR e transferência com memória).
-- [ ] **Task 1.7:** Consolidar e revisar o Documento de Arquitetura (v1.0).
+- [x] **Task 1.2:** Desenhar o diagrama de blocos de alto nível mapeando as partições internas do sistema: `SPI IF` (*SPI Interface*), `CDC` (*Clock Domain Crossing*), `FSM SPI` (máquina de estados do protocolo SPI), `Controlador/CSR` (*Control and Status Registers*), núcleo criptográfico `AES`, subsistema de `Memória`, gerador de `RESET` e `PLL` (*Phase-Locked Loop*).
+- [x] **Task 1.3:** Especificar a tabela de Mapa de Registradores CSR (*Control and Status Registers*) acessíveis via barramento SPI (endereçamento, bitfields, permissões RW/RO — *Read-Write / Read-Only*, flags de status e comandos de controle).
+- [x] **Task 1.4:** Definir a estratégia e arquitetura de Clock/Reset, explicitando os mecanismos de travessia assíncrona CDC (*Clock Domain Crossing*) entre o domínio serial `SCLK` (SPI) e o domínio de sistema `clk_sys` gerado pelo PLL.
+- [x] **Task 1.5:** Formalizar contratos e interfaces físicas de I/O (*Input/Output*, larguras de barramento, sinais de handshake) para os modelos de apoio em simulação (mock de Memória e mock de PLL com sinal de travamento `locked`).
+- [x] **Task 1.6:** Definir a microarquitetura do núcleo AES (arquitetura iterativa por rodada, sub-rotinas de transformação criptográfica e interfaces de controle com CSR e transferência com memória).
+- [x] **Task 1.7:** Consolidar e revisar o Documento de Arquitetura (v1.0).
 
 ---
 
@@ -60,39 +60,35 @@ Para assegurar clareza e precisão na documentação, a tabela abaixo consolida 
 > **Fluxo Arquitetural do Sistema:**  
 > `SPI IF` (Interface Serial) $\longrightarrow$ `CDC` (Sincronização de Domínios) $\longrightarrow$ `FSM SPI` (Controle de Quadro) $\longrightarrow$ `Controlador da Aplicação / CSR` (Registradores) $\longrightarrow$ `AES Core` (Datapath) $\longrightarrow$ `Memória`
 
-- [ ] **Task 2.1 — Datapath do AES e Sub-rotinas de Rodada (Semana 3):**
-  - Implementar o datapath da matriz de estado do AES (128 bits) e suas 4 transformações fundamentais de rodada:
-    - `SubBytes`: substituição não linear byte a byte utilizando tabela de busca (LUT — *Look-Up Table* / S-Box fundamentada no corpo de Galois $\text{GF}(2^8)$);
-    - `ShiftRows`: permutação e deslocamento cíclico dos bytes nas linhas da matriz de estado;
-    - `MixColumns`: transformação linear de difusão sobre as colunas da matriz;
-    - `AddRoundKey`: combinação XOR bit a bit entre o estado e a subchave da rodada atual.
-  - Implementar testbench unitário validando cada transformação isolada contra os valores intermediários de referência da norma NIST FIPS-197 (*Federal Information Processing Standard*).
+- [ ] **Task 2.1 — Datapath do AES (`minisoc_aes_dp.sv`) — Cipher e Inverse Cipher (Semana 3):**
+  - Implementar o datapath da matriz de estado do AES (128 bits) suportando cifragem (*Cipher*) e decifragem direta (*Inverse Cipher*):
+    - `SubBytes` / `InvSubBytes`: substituição não linear byte a byte via S-Box e InvS-Box em $\text{GF}(2^8)$;
+    - `ShiftRows` / `InvShiftRows`: deslocamento cíclico de linhas direto e inverso;
+    - `MixColumns` / `InvMixColumns`: difusão linear matricial em $\text{GF}(2^8)$;
+    - `AddRoundKey`: combinação XOR de 128 bits entre estado e subchave da rodada.
+  - Implementar testbench unitário validando cada transformação isolada contra os valores intermediários de referência da norma NIST FIPS-197.
 
-- [ ] **Task 2.2 — Expansão de Chave e Controle do AES (Semana 4):**
-  - Implementar o algoritmo de expansão de chave (*Key Expansion*) para chave de 128 bits (rotinas de rotação de palavra `RotWord`, substituição de bytes `SubWord` via S-Box e soma com constantes de rodada `Rcon`);
-  - Implementar a Máquina de Estados Finitos (FSM — *Finite State Machine*) de controle do fluxo iterativo do AES (rodada inicial, 9 rodadas intermediárias, rodada final e sinalização de término `done`);
-  - Integrar e validar o núcleo AES completo em testbench dirigido utilizando os vetores de teste oficiais do FIPS-197.
+- [ ] **Task 2.2 — Expansão de Chave (`minisoc_aes_key_exp.sv`) e Engine Multi-Modo (`minisoc_aes_top.sv`) (Semana 4):**
+  - Implementar a expansão de chave para 128 bits (`RotWord`, `SubWord`, `Rcon`) suportando acesso direto (`0..10`) e reverso (`10..0`);
+  - Implementar o controlador de modos (`ECB`, `CBC`, `PCBC`, `CFB`, `OFB`, `CTR`), processamento *in-place* de `1..256` blocos (4 palavras de 32 bits por bloco), validação de parâmetros (`ERROR`) e indicação *sticky* de `DONE` e `BLOCKS_DONE`;
+  - Validar o núcleo completo em testbench dirigido com vetores FIPS-197 e vetores multi-bloco para os 6 modos.
 
-- [ ] **Task 2.3 — Interface SPI e Sincronização de Domínio / CDC (Semana 5):**
-  - Implementar o frontend da interface periférica SPI Slave (`SPI IF`): registrador de deslocamento para transmissão/recepção serial nas linhas PICO/POCI (*Peripheral In, Controller Out* / *Peripheral Out, Controller In*) e contador de amostragem de bits operando no domínio de clock `SCLK`;
-  - Implementar os circuitos de travessia entre domínios de clock (CDC — *Clock Domain Crossing*): sincronizadores de duplo flip-flop (2-FF) para sinais de controle/flags de quadro e mecanismos de passagem estável de dados entre o domínio assíncrono `SCLK` e o domínio síncrono do sistema `clk_sys`.
+- [x] **Task 2.3 — Interface SPI de 40 bits e Sincronização CDC (`minisoc_spi_phy.sv`, `minisoc_spi_cdc.sv`) (Semana 5):**
+  - Implementar a camada física SPI Mode 0 MSB-first (`spi_sclk` até 25 MHz) com quadro fixo de 40 bits (`{RWb, ADDR[5:0], RSV, DATA[31:0]}`) e leitura *Out-of-Frame* em duas transações;
+  - Implementar a travessia CDC de evento/toggle de frame completo (`spi_sclk` $\leftrightarrow$ `clk` always-on de 2 GHz) com sincronizador 2-FF e retenção estática (*Data-Hold*).
 
-- [ ] **Task 2.4 — FSM SPI e Controlador da Aplicação / Banco de Registradores CSR (Semana 5):**
-  - Implementar a FSM de transação SPI para decodificação do protocolo de quadro (byte de comando/endereço, sentido RW — Leitura/Escrita e detecção de bordas da linha de seleção `CS_N` — *Chip Select*);
-  - Implementar o Banco de Registradores de Controle e Status (CSR — *Control and Status Registers*) conforme especificado no mapa de registradores da US1;
-  - Implementar o Controlador da Aplicação: decodificação de comandos, geração de pulsos de disparo/início de cifragem (`start_cipher`), sinalização de chave carregada, amostragem e multiplexação de status (`aes_done`, `pll_locked`, etc.) e controle dos registradores de configuração.
+- [x] **Task 2.4 — Banco CSR de 32 bits e Wrapper SPI (`minisoc_spi_csr.sv`, `minisoc_spi.sv`) (Semana 5):**
+  - Implementar o banco CSR completo de 32 bits no domínio always-on `clk` (`KEY0..3`, `IV0..3`, `COUNTER_HI/LO`, `NUM_BLOCKS`, `AES_CONTROL`, `AES_STATUS`, `VERSION`, `SYSTEM_CONTROL`, `SYSTEM_STATUS` e `NOP = 0x3F`), atendendo à regra de *bootstrap* do PLL;
+  - Encapsular PHY + CDC + CSR no módulo `rtl/minisoc_spi/minisoc_spi.sv` e validar em testbench dirigido (`tb/tb_minisoc_spi.sv`).
 
-- [ ] **Task 2.5 — Subsistema de Memória e Modelos de Apoio / Mocks (Semanas 5 e 6):**
-  - Implementar a interface de dados de memória (`MEMORY DATA IF` — *Memory Data Interface*) para transferência de blocos (leitura de texto plano *plaintext* e escrita de texto cifrado *ciphertext*);
-  - Implementar modelo comportamental (*mock*) de memória para suporte aos testes de simulação funcional;
-  - Implementar modelo comportamental (*mock*) do PLL (*Phase-Locked Loop*), contemplando a inicialização pós-reset e a geração do sinal de travamento de fase `locked`.
+- [x] **Task 2.5 — Memória Compartilhada e Modelo RTL do PLL (`minisoc_memory.sv`, `minisoc_pll_mock.sv`) (Semanas 5 e 6):**
+  - Implementar `rtl/minisoc_mem/minisoc_memory.sv` (SRAM single-port síncrona $1024 \times 32$ bits sem reset funcional no array);
+  - Implementar `rtl/minisoc_pll/minisoc_pll_mock.sv` (referência de 2 GHz, `PLL_ENABLE`, divisores `/1, /2, /4, /8`, atraso pseudoaleatório por LFSR e liberação *glitch-free* de `o_sys_clk` pós-`o_locked`).
 
-- [ ] **Task 2.6 — Integração do Top-Level e Verificação Ponta a Ponta (Semana 6):**
-  - Integrar todos os submódulos no arquivo de topo `top_level.sv`, interligando o fluxo completo:
-    `SPI IF` $\to$ `CDC` $\to$ `FSM SPI` $\to$ `Controlador/CSR` $\to$ `AES Core` $\to$ `Memória`;
-  - Executar simulação de integração de ponta a ponta (*End-to-End* — E2E): configuração e carga de parâmetros via SPI $\to$ disparo da cifragem $\to$ leitura de dados da memória $\to$ processamento no AES $\to$ escrita do resultado cifrado na memória;
-  - Executar análise estática de conformidade de código (*Lint*) e validação de travessia de domínios assíncronos (*CDC*);
-  - Congelar o código base do IP (*Intellectual Property*) e emitir a **TAG RTL v1.0**.
+- [ ] **Task 2.6 — Integração do Top-Level (`minisoc_top.sv`) e Verificação Ponta a Ponta (Semana 6):**
+  - Integrar `minisoc_spi`, `minisoc_pll_mock`, `minisoc_aes_top` e `minisoc_memory` em `rtl/minisoc_top.sv` (incluindo reset determinístico pós-lock `sys_rst_n`, CDC `clk` $\leftrightarrow$ `sys_clk` e mux de exclusão mútua `MEM_SEL_AES`);
+  - Executar simulação E2E seguindo os 14 passos do Modelo de Programação do Block Guide;
+  - Executar análise estática de *Lint* e *CDC* e emitir a **TAG RTL v1.0**.
 
 ---
 

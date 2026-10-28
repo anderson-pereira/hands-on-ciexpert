@@ -41,10 +41,14 @@ LIB_VERILOG := $(LIB_DIR)/saed32nm.v
 LIB_DB      := $(LIB_DIR)/saed32rvt_tt1p05v25c.db
 
 # ==========================================
-# Files
+# Files (Supports rtl/ and rtl/minisoc_*/ subdirectories)
 # ==========================================
-RTL_FILES = $(wildcard $(RTL_DIR)/*.sv)
-TB_FILES  = $(wildcard $(TB_DIR)/*.sv)
+ALL_RTL_SV := $(wildcard $(RTL_DIR)/*.sv $(RTL_DIR)/*/*.sv)
+PKG_FILES  := $(filter %_pkg.sv, $(ALL_RTL_SV))
+IF_FILES   := $(filter %_if.sv, $(ALL_RTL_SV))
+OTHER_RTL  := $(filter-out $(PKG_FILES) $(IF_FILES), $(ALL_RTL_SV))
+RTL_FILES  := $(PKG_FILES) $(IF_FILES) $(OTHER_RTL)
+TB_FILES    = $(wildcard $(TB_DIR)/*.sv)
 
 # ==========================================
 # Testbench Top & Scripts
@@ -117,6 +121,13 @@ sim: compile
 	@echo "[INFO] Running Simulation..."
 	cd $(SIM_RTL_OUT) && $(SNPS_ENV) && ./simv -l $(ROOT_DIR)/tb/rtl_simulation.log
 
+sim_spi: prep_sim_rtl
+	@echo "[INFO] Running MiniSoC SPI Subsystem Simulation..."
+	cd $(SIM_RTL_OUT) && $(SNPS_ENV) && vlogan $(VLOGAN_FLAGS) $(RTL_FILES) $(TB_DIR)/tb_minisoc_spi.sv -l $(ROOT_DIR)/tb/compile_spi.log
+	cd $(SIM_RTL_OUT) && $(SNPS_ENV) && vcs $(VCS_FLAGS) -top tb_minisoc_spi -o simv_spi -l $(ROOT_DIR)/tb/vcs_spi.log
+	cd $(SIM_RTL_OUT) && $(SNPS_ENV) && ./simv_spi -l $(ROOT_DIR)/tb/spi_simulation.log
+
+
 # ==========================================
 # Synthesis
 # ==========================================
@@ -164,5 +175,5 @@ clean_libs:
 
 clean_all: clean clean_libs
 
-.PHONY: all prep_libs prep_sim_rtl prep_syn prep_fm prep_upf lint compile sim synth formal upf_check run check_tools clean clean_libs clean_all
+.PHONY: all prep_libs prep_sim_rtl prep_syn prep_fm prep_upf lint compile sim sim_spi synth formal upf_check run check_tools clean clean_libs clean_all
 

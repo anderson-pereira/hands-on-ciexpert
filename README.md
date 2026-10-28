@@ -11,7 +11,7 @@ Repositório dedicado ao desenvolvimento de hardware do projeto **Hands-on CIExp
 
 ## 1. Visão Geral do Projeto
 
-O sistema desenvolvido é o **`AES Top-Level System`**, concebido como um IP parametrizável e sintetizável integrado com interface externa de barramento e subsistema de memória:
+O sistema desenvolvido é o **`MiniSoC AES`** (`minisoc_top`), concebido como um IP sintetizável alinhado à especificação oficial [`DV_BlockGuide_MiniSoCAES_v1.0.0.pdf`](docs/references/DV_BlockGuide_MiniSoCAES_v1.0.0.pdf):
 
 ```mermaid
 flowchart LR
@@ -19,41 +19,42 @@ flowchart LR
     classDef blk fill:#1e293b,stroke:#3b82f6,stroke-width:2px,color:#f8fafc,rx:6,ry:6;
     classDef core fill:#4c1d95,stroke:#a855f7,stroke-width:2px,color:#faf5ff,rx:6,ry:6;
 
-    subgraph EXT_IO ["Interfaces Externas"]
-        RST["GLOBAL RESET"]:::port
-        CLK["clk from OSC"]:::port
-        SPI_IO["SPI IF (CS, SCK, PICO, POCI)"]:::port
-        MEM_IO["MEMORY DATA IF"]:::port
+    subgraph EXT_IO ["Interfaces de Topo"]
+        RST["rst_n"]:::port
+        CLK["clk (2 GHz)"]:::port
+        SPI_IO["SPI IF (spi_sclk, spi_cs_n, spi_mosi, spi_miso)"]:::port
+        MEM_IO["MEMORY DATA IF (1024x32)"]:::port
     end
 
-    subgraph TOP ["AES TOP-LEVEL SYSTEM"]
-        RST_BLK["RESET Controller"]:::blk
-        PLL_BLK["PLL Model (locked)"]:::blk
-        SPI_BLK["SPI Slave & CSR (CDC)"]:::blk
-        MEM_SYS["Memory / Data Subsystem"]:::blk
-        AES_CORE["AES Cryptographic Core\n(128-bit Datapath + FSM)"]:::core
+    subgraph TOP ["MINISOC AES TOP-LEVEL SYSTEM (minisoc_top)"]
+        RST_BLK["Reset Sequencer"]:::blk
+        PLL_BLK["minisoc_pll_mock (/1,/2,/4,/8)"]:::blk
+        SPI_BLK["minisoc_spi (40b Frame + CDC + 32b CSR)"]:::blk
+        AES_CORE["minisoc_aes_top (ECB,CBC,PCBC,CFB,OFB,CTR)"]:::core
+        MEM_MUX["Ownership Mux (MEM_SEL_AES)"]:::blk
+        SRAM[("minisoc_memory (1024 x 32b)")]:::blk
     end
-
-    EXT_MEM[("External Memory\n(Mock / VIP)")]:::blk
 
     RST ==> RST_BLK
     CLK ==> PLL_BLK
+    CLK ==> SPI_BLK
     SPI_IO <==> SPI_BLK
-    MEM_IO <==> MEM_SYS
+    MEM_IO <==> MEM_MUX
 
-    RST_BLK --> PLL_BLK
-    PLL_BLK --> SPI_BLK
-    PLL_BLK -.-> AES_CORE
-    SPI_BLK <==>|"CSR & Handshake"| AES_CORE
-    AES_CORE <==> MEM_SYS
-    MEM_SYS <==> EXT_MEM
+    RST_BLK --> AES_CORE
+    PLL_BLK -->|"sys_clk (after locked)"| AES_CORE
+    PLL_BLK <==>|"enable, div_sel, locked"| SPI_BLK
+    SPI_BLK <==>|"CSR & Status"| AES_CORE
+    SPI_BLK -->|"MEM_SEL_AES"| MEM_MUX
+    AES_CORE <==> MEM_MUX
+    MEM_MUX <==> SRAM
 ```
 
 ### Principais Componentes do Sistema:
-- **Núcleo Criptográfico AES-128**: Datapath iterativo para blocos de 128 bits e suporte à expansão de chaves (*on-the-fly*);
-- **Interface SPI Slave & CSR**: Recepção/transmissão serial síncrona, banco de registradores de controle e status, e barreira de sincronização entre domínios de clock (*Clock Domain Crossing* — `SCLK` vs `clk_sys`);
-- **Gerenciamento de Clock & Reset**: Controlador de reset assíncrono com desativação síncrona e modelo de PLL com sinal de travamento (`locked`);
-- **Subsistema de Dados**: Interface de arbitragem para alimentação de blocos em claro (*Plaintext*) e devolução do bloco cifrado (*Ciphertext*);
+- **Engine Criptográfico AES-128 (`rtl/minisoc_aes/`)**: Datapath iterativo com suporte a *Cipher* e *Inverse Cipher*, expansão de chaves e 6 modos de operação (`ECB`, `CBC`, `PCBC`, `CFB`, `OFB`, `CTR`) para `1..256` blocos *in-place*;
+- **SPI Front-End (`rtl/minisoc_spi/`)**: Protocolo SPI Mode 0 de 40 bits (*Out-of-Frame Read* em 2 transações), travessia CDC de frame completo e banco CSR de 32 bits operando no domínio always-on (`clk` de 2 GHz) para *bootstrap* do PLL;
+- **PLL Mock & Reset (`rtl/minisoc_pll/`)**: Divisor `/1, /2, /4, /8` a partir de referência de 2 GHz com tempo de travamento pseudoaleatório (LFSR) e liberação *glitch-free* de `sys_clk` somente após `PLL_LOCKED`;
+- **Memória Compartilhada (`rtl/minisoc_mem/`)**: SRAM single-port síncrona de $1024 \times 32$ bits multiplexada exclusivamente entre `MEMORY DATA IF` e o AES Engine via `MEM_SEL_AES`;
 - **Arquitetura de Baixo Consumo**: Intenção de potência descrita em UPF (IEEE 1801), integrando estratégias de *Clock Gating* (ICG) e *Power Gating*.
 
 ---
@@ -101,7 +102,8 @@ make all
 
 | Comando | Descrição do Fluxo Executado | Saídas Principais |
 | :--- | :--- | :--- |
-| **`make sim`** | Executa linting, compilação com VCS e roda a simulação funcional. | `tb/rtl_simulation.log`, `build/sim_rtl/` |
+| **`make sim`** | Executa linting, compilação com VCS e roda a simulação de topo. | `tb/rtl_simulation.log`, `build/sim_rtl/` |
+| **`make sim_spi`** | Compila e simula o subsistema `minisoc_spi` + PLL Bootstrap + Memória. | `tb/spi_simulation.log`, `build/sim_rtl/` |
 | **`make lint`** | Executa checagem de sintaxe estrita SystemVerilog (`vlogan +lint=all`). | `tb/lint.log` |
 | **`make compile`** | Compila o RTL e o testbench gerando o executável binário `simv`. | `tb/compile.log`, `build/sim_rtl/simv` |
 | **`make synth`** | Executa a síntese lógica com Design Compiler contra o PDK SAED 32nm. | `build/syn/top_syn.v`, `syn/synthesis.log` |
@@ -131,9 +133,13 @@ O repositório adota separação estrita entre fontes de projeto, infraestrutura
 │   ├── architecture/       # Especificação e diagramas de arquitetura (v1.0)
 │   └── spec/               # Especificações detalhadas de registradores e interfaces
 │
-├── rtl/                    # Fontes sintetizáveis em SystemVerilog (.sv)
-├── tb/                     # Testbenches funcionais dirigidos e arquivos de estímulo
-├── models/                 # Modelos comportamentais de teste (mocks de PLL e Memória)
+├── rtl/                    # Fontes RTL organizados conforme o Block Guide (Seção 10)
+│   ├── minisoc_spi/        # Front-end SPI modular (pkg, if, phy, cdc, csr e minisoc_spi.sv)
+│   ├── minisoc_pll/        # Modelo RTL do PLL (minisoc_pll_mock.sv)
+│   ├── minisoc_mem/        # Memória física compartilhada 1024x32 (minisoc_memory.sv)
+│   └── minisoc_aes/        # Engine criptográfico AES-128 (dp, key_exp, top)
+├── tb/                     # Testbenches funcionais dirigidos (tb_minisoc_spi.sv, tb_top.sv)
+├── backups/                # Pacote arquivado da versão preliminar SPI In-Frame/Burst (.zip)
 ├── syn/                    # Scripts TCL de síntese, restrições SDC e relatórios
 ├── formal/                 # Scripts de verificação formal no Formality
 ├── upf/                    # Arquivos de intenção de baixo consumo (UPF / IEEE 1801)

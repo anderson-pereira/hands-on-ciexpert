@@ -1,0 +1,2536 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MiniSoC AES-128 — Interactive Hardware &amp; RTL Architecture Explorer</title>
+  <style>
+    :root,
+    [data-theme="dark"] {
+      --bg: #0b0f17;
+      --surface: #121826;
+      --surface-alt: #182032;
+      --surface-elev: #1e293b;
+      --border: #293548;
+      --border-strong: #3b4d6b;
+      --fg: #e2e8f0;
+      --fg-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.14);
+      --accent-fg: #082f49;
+      --green: #34d399;
+      --green-soft: rgba(52, 211, 153, 0.14);
+      --amber: #fbbf24;
+      --amber-soft: rgba(251, 191, 36, 0.15);
+      --rose: #fb7185;
+      --rose-soft: rgba(251, 113, 133, 0.16);
+      --violet: #a78bfa;
+      --violet-soft: rgba(167, 139, 250, 0.15);
+      --code-bg: #090d14;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    [data-theme="light"] {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --surface-alt: #f8fafc;
+      --surface-elev: #e2e8f0;
+      --border: #cbd5e1;
+      --border-strong: #94a3b8;
+      --fg: #0f172a;
+      --fg-muted: #475569;
+      --accent: #0284c7;
+      --accent-soft: rgba(2, 132, 199, 0.12);
+      --accent-fg: #ffffff;
+      --green: #059669;
+      --green-soft: rgba(5, 150, 105, 0.12);
+      --amber: #d97706;
+      --amber-soft: rgba(217, 119, 6, 0.12);
+      --rose: #e11d48;
+      --rose-soft: rgba(225, 29, 72, 0.12);
+      --violet: #7c3aed;
+      --violet-soft: rgba(124, 58, 237, 0.12);
+      --code-bg: #f8fafc;
+      --shadow: 0 6px 20px rgba(15, 23, 42, 0.07);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      padding: 20px 24px 48px;
+    }
+
+    .mono {
+      font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .top-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
+
+    .title-group h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .title-group p {
+      color: var(--fg-muted);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--surface-alt);
+      color: var(--fg);
+    }
+
+    .badge-accent {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .badge-green {
+      background: var(--green-soft);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .badge-rose {
+      background: var(--rose-soft);
+      border-color: var(--rose);
+      color: var(--rose);
+    }
+
+    .badge-amber {
+      background: var(--amber-soft);
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+
+    /* Stimulus Configuration Panel */
+    .stimulus-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 18px;
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
+
+    .stimulus-body {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .stimulus-body.collapsed {
+      display: none;
+    }
+
+    .stim-grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 10px 14px;
+    }
+
+    .stim-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stim-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 12px;
+    }
+
+    .stim-label {
+      font-weight: 700;
+      color: var(--fg);
+    }
+
+    .stim-status {
+      font-size: 11px;
+      color: var(--fg-muted);
+    }
+
+    .stim-status.invalid {
+      color: var(--rose);
+      font-weight: 700;
+    }
+
+    .stim-input {
+      width: 100%;
+      height: 34px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface-alt);
+      color: var(--fg);
+      font-size: 12.5px;
+      font-weight: 600;
+      transition: border-color 0.12s ease;
+    }
+
+    .stim-input:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: -1px;
+      border-color: var(--accent);
+    }
+
+    .stim-input.invalid {
+      border-color: var(--rose);
+    }
+
+    /* Navigation Tabs — 6 equal columns in a single horizontal row */
+    .nav-tabs {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 960px) {
+      .nav-tabs {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .nav-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    /* S-Box 16x16 Grid */
+    .sbox-grid {
+      display: grid;
+      grid-template-columns: 28px repeat(16, minmax(0, 1fr));
+      gap: 3px;
+      text-align: center;
+      margin-top: 8px;
+      user-select: none;
+    }
+
+    .sbox-hdr {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--fg-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 25px;
+      border-radius: 4px;
+    }
+
+    .sbox-hdr.active-axis {
+      color: var(--accent);
+      background: var(--accent-soft);
+      font-weight: 800;
+    }
+
+    .sbox-cell {
+      height: 25px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--fg);
+      cursor: pointer;
+      transition: all 0.1s ease;
+      padding: 0;
+    }
+
+    .sbox-cell:hover {
+      border-color: var(--accent);
+      background: var(--surface-elev);
+      transform: scale(1.08);
+      z-index: 2;
+    }
+
+    .sbox-cell.active-rowcol {
+      background: var(--accent-soft);
+      border-color: var(--border-strong);
+    }
+
+    .sbox-cell.selected {
+      background: var(--accent);
+      color: var(--accent-fg);
+      border-color: var(--accent);
+      font-weight: 800;
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+      z-index: 3;
+    }
+
+    .nav-tab {
+      cursor: pointer;
+      padding: 10px 12px;
+      border-radius: 11px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--fg-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 3px;
+      transition: all 0.15s ease;
+      box-shadow: var(--shadow);
+    }
+
+    .nav-tab:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+    }
+
+    .nav-tab .tab-main {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--fg);
+      line-height: 1.25;
+    }
+
+    .nav-tab .tab-sub {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--fg-muted);
+      line-height: 1.2;
+    }
+
+    .nav-tab.active {
+      background: var(--accent);
+      color: var(--accent-fg);
+      border-color: var(--accent);
+    }
+
+    .nav-tab.active .tab-main,
+    .nav-tab.active .tab-sub {
+      color: var(--accent-fg);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* Cards & Layout Grids */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .subcard {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .grid-12 {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .col-3 {
+      grid-column: span 3;
+    }
+
+    .col-4 {
+      grid-column: span 4;
+    }
+
+    .col-5 {
+      grid-column: span 5;
+    }
+
+    .col-6 {
+      grid-column: span 6;
+    }
+
+    .col-7 {
+      grid-column: span 7;
+    }
+
+    .col-8 {
+      grid-column: span 8;
+    }
+
+    .col-9 {
+      grid-column: span 9;
+    }
+
+    .col-12 {
+      grid-column: span 12;
+    }
+
+    @media (max-width: 960px) {
+
+      .col-3,
+      .col-4,
+      .col-5,
+      .col-6,
+      .col-7,
+      .col-8,
+      .col-9 {
+        grid-column: span 12;
+      }
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 14px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button {
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-alt);
+      color: var(--fg);
+      transition: all 0.12s ease;
+    }
+
+    button:hover:not(:disabled) {
+      border-color: var(--accent);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    button.btn-primary,
+    button.pill-active {
+      background: var(--accent);
+      color: var(--accent-fg);
+      border-color: var(--accent);
+    }
+
+    button.btn-amber {
+      background: var(--amber-soft);
+      color: var(--amber);
+      border-color: var(--amber);
+    }
+
+    /* State 4x4 Matrix */
+    .matrix-table {
+      display: grid;
+      grid-template-columns: 54px repeat(4, 1fr);
+      gap: 6px;
+      align-items: center;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    .matrix-hdr {
+      font-size: 12px;
+      color: var(--fg-muted);
+    }
+
+    .cell-btn {
+      height: 42px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 0;
+    }
+
+    .cell-btn .sub-idx {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--fg-muted);
+      line-height: 1;
+      margin-top: 2px;
+    }
+
+    .cell-btn.selected {
+      outline: 2px solid var(--accent);
+      outline-offset: -1px;
+      background: var(--accent-soft);
+    }
+
+    .cell-btn.diff {
+      background: var(--rose-soft);
+      border-color: var(--rose);
+      color: var(--rose);
+    }
+
+    .cell-btn.col-focus {
+      background: var(--violet-soft);
+      border-color: var(--violet);
+    }
+
+    /* Formula & RTL Code Blocks */
+    .formula-box {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    pre.rtl-code {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 12px;
+      line-height: 1.55;
+      overflow-x: auto;
+      color: var(--fg);
+    }
+
+    .kw {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .cm {
+      color: var(--fg-muted);
+    }
+
+    .num {
+      color: var(--amber);
+    }
+
+    .fn {
+      color: var(--green);
+    }
+
+    .rule-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .rule-list li {
+      position: relative;
+      padding-left: 16px;
+      font-size: 13px;
+      color: var(--fg);
+    }
+
+    .rule-list li::before {
+      content: "▸";
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .kv-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-size: 12px;
+    }
+
+    .kv-row.highlight {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+    }
+
+    .kv-row.leak {
+      background: var(--rose-soft);
+      border-color: var(--rose);
+    }
+
+    .hex-input {
+      width: 46px;
+      height: 32px;
+      text-align: center;
+      border-radius: 6px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--fg);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .hex-input:focus {
+      outline: 2px solid var(--accent);
+    }
+
+    table.hw-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    table.hw-table th,
+    table.hw-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    table.hw-table th {
+      color: var(--fg-muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--surface-alt);
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .muted {
+      color: var(--fg-muted);
+    }
+
+    .mt-2 {
+      margin-top: 8px;
+    }
+
+    .mt-3 {
+      margin-top: 12px;
+    }
+
+    .mt-4 {
+      margin-top: 16px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- Top Header -->
+    <header class="top-header">
+      <div class="title-group">
+        <h1>MiniSoC AES-128 — Hardware Architecture &amp; RTL Explorer</h1>
+        <p>Interactive reference for FIPS-197 &amp; MiniSoC AES Block Guide v1.0.0 · Target: Synopsys SAED 32nm @ 2.0
+          GHz (500 ps)</p>
+      </div>
+      <div class="badge-row">
+        <span class="badge badge-accent mono">State [127:0] Column-Major</span>
+        <span class="badge badge-green mono">Sync Reset QoR</span>
+        <button id="btn-theme" type="button">☀️ Light Theme</button>
+      </div>
+    </header>
+
+    <!-- Global Algorithm Stimulus Configuration (KEY, IV, Data Blocks, Counter) -->
+    <section class="stimulus-card">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+          <strong style="font-size: 14px;">🎛️ Algorithm Input Stimulus (KEY, IV, Data &amp; Counter)</strong>
+          <span id="stim-summary-badge" class="badge badge-accent mono">Preset: FIPS-197 Appendix B</span>
+        </div>
+        <div class="btn-group">
+          <button id="stim-pre-fips" type="button" class="pill-active">FIPS-197 App. B</button>
+          <button id="stim-pre-c1" type="button">FIPS-197 App. C.1</button>
+          <button id="stim-pre-nist" type="button">NIST SP 800-38A</button>
+          <button id="stim-pre-zero" type="button">All-Zero</button>
+          <button id="stim-random" type="button">🎲 Randomize</button>
+          <button id="stim-toggle" type="button">▾ Hide Inputs</button>
+        </div>
+      </div>
+
+      <div id="stim-body" class="stimulus-body">
+        <div class="stim-grid">
+          <div class="stim-field col-6">
+            <div class="stim-label-row">
+              <label class="stim-label" for="inp-key">Secret KEY [127:0] (CSR KEY_0..3)</label>
+              <span id="stat-key" class="stim-status mono">128-bit hex</span>
+            </div>
+            <input id="inp-key" type="text" class="stim-input mono" spellcheck="false" />
+          </div>
+
+          <div class="stim-field col-6">
+            <div class="stim-label-row">
+              <label class="stim-label" for="inp-iv">Public IV [127:0] (CSR IV_0..3)</label>
+              <span id="stat-iv" class="stim-status mono">128-bit hex</span>
+            </div>
+            <input id="inp-iv" type="text" class="stim-input mono" spellcheck="false" />
+          </div>
+
+          <div class="stim-field col-5">
+            <div class="stim-label-row">
+              <label class="stim-label" for="inp-p0">Data Block 0 [127:0] (Tab 1 &amp; Mode Block 0)</label>
+              <span id="stat-p0" class="stim-status mono">128-bit hex</span>
+            </div>
+            <input id="inp-p0" type="text" class="stim-input mono" spellcheck="false" />
+          </div>
+
+          <div class="stim-field col-4">
+            <div class="stim-label-row">
+              <label class="stim-label" for="inp-p1">Data Block 1 [127:0] (Mode Block 1)</label>
+              <button id="btn-copy-p0" type="button" style="padding: 1px 7px; font-size: 11px;">Set P1 = P0</button>
+            </div>
+            <input id="inp-p1" type="text" class="stim-input mono" spellcheck="false" />
+          </div>
+
+          <div class="stim-field col-3">
+            <div class="stim-label-row">
+              <label class="stim-label" for="inp-ctr">CTR Counter_0 [63:0]</label>
+              <span id="stat-ctr" class="stim-status mono">64-bit hex</span>
+            </div>
+            <input id="inp-ctr" type="text" class="stim-input mono" spellcheck="false" />
+          </div>
+        </div>
+
+        <div class="kv-row mt-3 mono" style="background: var(--surface-alt);">
+          <span class="muted">Accepts raw hex, spaces, underscores (<span class="mono">_</span>), or <span
+              class="mono">128'h</span> / <span class="mono">0x</span> prefixes (auto zero-padded on Enter/blur).</span>
+          <span>Single-Block E_K(Block 0) = <strong id="stim-ek-preview" style="color: var(--accent);"></strong></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Module Navigation (6 equal columns, two-line titles, single horizontal row) -->
+    <nav class="nav-tabs" id="main-nav">
+      <button type="button" class="nav-tab active" data-tab="tab-datapath">
+        <span class="tab-main">1. Datapath &amp; State</span>
+        <span class="tab-sub">Cipher &amp; InvCipher</span>
+      </button>
+      <button type="button" class="nav-tab" data-tab="tab-sbox">
+        <span class="tab-main">2. S-Box &amp; Inv S-Box</span>
+        <span class="tab-sub">LUT &amp; GF(2^8) Math</span>
+      </button>
+      <button type="button" class="nav-tab" data-tab="tab-gf28">
+        <span class="tab-main">3. GF(2^8) Columns</span>
+        <span class="tab-sub">MixColumns &amp; InvMixColumns</span>
+      </button>
+      <button type="button" class="nav-tab" data-tab="tab-keyexp">
+        <span class="tab-main">4. KeyExpansion</span>
+        <span class="tab-sub">Hardware RK0 ↔ RK10</span>
+      </button>
+      <button type="button" class="nav-tab" data-tab="tab-modes">
+        <span class="tab-main">5. Operating Modes</span>
+        <span class="tab-sub">IV, Counter &amp; Chaining</span>
+      </button>
+      <button type="button" class="nav-tab" data-tab="tab-rules">
+        <span class="tab-main">6. RTL Rules &amp; Bus</span>
+        <span class="tab-sub">SAED 32nm @ 2.0 GHz</span>
+      </button>
+    </nav>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 1: DATAPATH & STATE EXPLORER (CIPHER & INVCIPHER)                 -->
+    <!-- ===================================================================== -->
+    <section id="tab-datapath" class="tab-panel active">
+      <div class="card">
+        <div class="toolbar">
+          <div class="btn-group">
+            <button id="dp-dir-enc" type="button" class="pill-active">🔒 Encrypt Block 0 (Cipher)</button>
+            <button id="dp-dir-dec-rt" type="button">🔓 Decrypt E_K(Block 0) (Round-Trip)</button>
+            <button id="dp-dir-dec-raw" type="button">🔓 Decrypt Raw Block 0</button>
+            <span id="dp-stage-badge" class="badge badge-accent mono">Round 1 · SubBytes</span>
+          </div>
+          <div class="btn-group">
+            <button id="dp-avalanche" type="button">⚡ Flip 1 Input Bit: OFF</button>
+            <button id="dp-first" type="button" title="Jump to initial input">⏮ Start</button>
+            <button id="dp-prev" type="button">◀ Prev</button>
+            <button id="dp-next" type="button" class="btn-primary">Next ▶</button>
+            <button id="dp-last" type="button" title="Jump to final output">End ⏭</button>
+          </div>
+        </div>
+
+        <!-- Round & Sub-step Selectors -->
+        <div class="toolbar" style="padding-bottom: 12px;">
+          <div id="dp-round-pills" class="btn-group"></div>
+          <div id="dp-op-pills" class="btn-group"></div>
+        </div>
+
+        <div class="grid-12">
+          <!-- Left: 4x4 Column-Major Matrix -->
+          <div class="col-5 subcard">
+            <div class="section-title">
+              <span>4×4 State Matrix <span class="mono muted">s[r,c]</span></span>
+              <span id="dp-avalanche-stat" class="badge mono">Active Stimulus</span>
+            </div>
+            <p class="muted" style="font-size: 12px;">Column-major packing: <span class="mono">Byte n → s[n%4,
+                n/4]</span>. Click any byte to inspect its hardware path.</p>
+
+            <div class="matrix-table mono">
+              <div></div>
+              <div class="matrix-hdr">c0<br />[127:96]</div>
+              <div class="matrix-hdr">c1<br />[95:64]</div>
+              <div class="matrix-hdr">c2<br />[63:32]</div>
+              <div class="matrix-hdr">c3<br />[31:0]</div>
+            </div>
+            <div id="dp-matrix" class="matrix-table mono"></div>
+
+            <div class="kv-row mt-3 mono">
+              <span class="muted">Selected Byte:</span>
+              <span id="dp-sel-info" style="font-weight: 700;">Byte 0 · s[0,0] · [127:120]</span>
+            </div>
+            <div class="kv-row mt-2 mono">
+              <span class="muted">128-bit Bus:</span>
+              <span id="dp-bus-hex" style="font-weight: 600; overflow: hidden; text-overflow: ellipsis;"></span>
+            </div>
+          </div>
+
+          <!-- Right: Hardware Transformation Inspector + Active RoundKey + RTL -->
+          <div class="col-7" style="display: flex; flex-direction: column; gap: 14px; justify-content: space-between;">
+            <div class="subcard">
+              <div class="section-title">
+                <span id="dp-op-title">SubBytes — Non-Linear Byte Substitution</span>
+                <span id="dp-rtl-module" class="badge badge-accent mono">minisoc_aes_sub_bytes</span>
+              </div>
+              <p id="dp-op-desc" class="muted" style="font-size: 13px; margin-bottom: 10px;"></p>
+              <div id="dp-formula" class="formula-box mono"></div>
+
+              <div class="mt-3">
+                <div
+                  style="font-size: 12px; font-weight: 700; margin-bottom: 6px; color: var(--fg-muted); text-transform: uppercase;">
+                  Hardware Implementation Rule &amp; RTL</div>
+                <pre id="dp-rtl-snippet" class="rtl-code mono"></pre>
+              </div>
+            </div>
+
+            <div class="subcard">
+              <div class="section-title">
+                <span id="dp-rk-title">Active Subkey: RoundKey[1]</span>
+                <span class="muted mono" style="font-size: 12px;">4 × 32-bit Words</span>
+              </div>
+              <div id="dp-rk-words" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;"
+                class="mono mt-2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 2: S-BOX & INVERSE S-BOX EXPLORER (FIPS-197 FIG 7 & FIG 14)       -->
+    <!-- ===================================================================== -->
+    <section id="tab-sbox" class="tab-panel">
+      <div class="card">
+        <div class="toolbar">
+          <div class="btn-group">
+            <button id="sb-mode-fwd" type="button" class="pill-active">Forward S-Box (minisoc_aes_sbox)</button>
+            <button id="sb-mode-inv" type="button">Inverse S-Box (minisoc_aes_inv_sbox)</button>
+            <span id="sb-mode-badge" class="badge badge-accent mono">Forward S-Box (FIPS-197 Fig 7)</span>
+          </div>
+          <div class="btn-group">
+            <button id="sb-pre-53" type="button" class="pill-active">8'h53 (→ 8'hed)</button>
+            <button id="sb-pre-00" type="button">8'h00 (→ 8'h63)</button>
+            <button id="sb-pre-19" type="button">8'h19 (→ 8'hd4)</button>
+            <button id="sb-pre-b0" type="button">Active Block 0 B0</button>
+            <button id="sb-inv-check" type="button">🔄 Test Bijection InvS(S(x))</button>
+          </div>
+        </div>
+
+        <div class="grid-12">
+          <!-- Left: 16x16 Interactive Table -->
+          <div class="col-7 subcard" style="overflow-x: auto;">
+            <div class="section-title">
+              <span id="sb-table-title">16×16 Substitution Table (256 Entries)</span>
+              <span class="badge mono" id="sb-coord-badge">Row 5, Col 3 → 8'hed</span>
+            </div>
+            <p class="muted" style="font-size: 12px; margin-bottom: 8px;">
+              Input byte <span class="mono">xy</span>: upper nibble <span class="mono">x</span> selects the Row (0..f);
+              lower nibble <span class="mono">y</span> selects the Column (0..f). Click any cell or type a byte.
+            </p>
+
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px;">
+              <span class="mono" style="font-size: 12px; font-weight: 700;">Lookup Byte: 8'h</span>
+              <input id="sb-inp-byte" type="text" maxlength="2" value="53" class="hex-input mono"
+                style="width: 48px; height: 28px;" />
+              <span id="sb-result-tag" class="badge badge-green mono" style="font-size: 12px;">S(53) = ed</span>
+              <span id="sb-bijection-badge" class="badge mono" style="font-size: 12px;">InvS(ed) = 53 (PASS)</span>
+            </div>
+
+            <!-- The 16x16 Grid -->
+            <div id="sb-grid" class="sbox-grid mono"></div>
+          </div>
+
+          <!-- Right: Transformation Breakdown & Hardware Architecture -->
+          <div class="col-5" style="display: flex; flex-direction: column; gap: 14px; justify-content: space-between;">
+            <!-- Step-by-Step Math Breakdown -->
+            <div class="subcard">
+              <div class="section-title">
+                <span id="sb-math-title">Two-Step Mathematical Definition (FIPS-197 Sec 5.1.1)</span>
+                <span class="badge badge-accent mono">Algebraic Construction</span>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;" class="mono">
+                <div class="kv-row">
+                  <span class="muted">Input Byte (x):</span>
+                  <strong id="sb-step0-val">8'h53 = 0101_0011_2</strong>
+                </div>
+                <div class="kv-row highlight">
+                  <div>
+                    <span id="sb-step1-lbl" style="font-weight: 700;">Step 1: Multiplicative Inverse in GF(2^8)</span>
+                    <div class="muted" style="font-size: 11px;">m(x) = x^8 + x^4 + x^3 + x + 1 (8'h11b). Note: 0x00⁻¹ ≡
+                      0x00</div>
+                  </div>
+                  <strong id="sb-step1-val">a = 8'hca</strong>
+                </div>
+                <div class="kv-row highlight">
+                  <div>
+                    <span id="sb-step2-lbl" style="font-weight: 700;">Step 2: Affine Transformation over GF(2)</span>
+                    <div class="muted" style="font-size: 11px;">s' = (M · a) ⊕ c, where c = 8'h63 (0110_0011_2)</div>
+                  </div>
+                  <strong id="sb-step2-val">s' = 8'hed</strong>
+                </div>
+              </div>
+
+              <!-- Bit-level equation box -->
+              <div class="formula-box mono mt-3" style="font-size: 11px; line-height: 1.5;">
+                <div id="sb-affine-bits"></div>
+              </div>
+            </div>
+
+            <!-- Hardware RTL & Synthesis Card -->
+            <div class="subcard">
+              <div class="section-title">
+                <span>Hardware Implementation &amp; QoR (SAED 32nm @ 2.0 GHz)</span>
+                <span class="badge badge-green mono">T = 500 ps</span>
+              </div>
+              <ul class="rule-list" style="margin-top: 6px; font-size: 12.5px;">
+                <li><strong>Architecture Chosen (minisoc_aes_sbox):</strong> Pure combinational 256×8-bit lookup (<span
+                    class="mono">case(i_byte)</span>). Synthesizes into a balanced 2-to-3-level AOI/MUX tree (~280
+                  gates) with ~160 ps delay.</li>
+                <li><strong>Timing Margin:</strong> 160 ps logic delay leaves ~340 ps for wire routing and setup time at
+                  2.0 GHz, easily closing STA on SAED 32nm.</li>
+                <li><strong>Why not Composite Fields (Canright)?</strong> Inverting algebraically in GF(((2^2)^2)^2)
+                  reduces area by ~50%, but propagation delay jumps to ~750 ps — violating the 500 ps clock cycle
+                  without pipeline registers.</li>
+                <li><strong>Cryptographic Robustness:</strong> Non-linearity = 112, Maximum Differential Probability =
+                  4/256 = 2⁻⁶, algebraic degree = 7. Zero fixed points (<span class="mono">S(x) != x</span> for all x).
+                </li>
+              </ul>
+              <pre class="rtl-code mono mt-3"><span class="cm">// rtl/minisoc_aes/minisoc_aes_sbox.sv</span>
+<span class="kw">always_comb begin</span>
+  <span class="kw">case</span> (i_byte)
+    <span class="num">8'h00</span>: o_byte = <span class="num">8'h63</span>;
+    <span class="num">8'h53</span>: o_byte = <span class="num">8'hed</span>;
+    <span class="cm">// ... 256 constant entries ...</span>
+  <span class="kw">endcase</span>
+<span class="kw">end</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 3: GF(2^8) MIXCOLUMNS & INVMIXCOLUMNS                             -->
+    <!-- ===================================================================== -->
+    <section id="tab-gf28" class="tab-panel">
+      <div class="card">
+        <div class="toolbar">
+          <div class="btn-group">
+            <button id="mc-mode-fwd" type="button" class="pill-active">Forward MixColumns ({02, 03, 01, 01})</button>
+            <button id="mc-mode-inv" type="button">Inverse InvMixColumns ({0e, 0b, 0d, 09})</button>
+          </div>
+          <div class="btn-group">
+            <button id="mc-pre-active" type="button">From Active Stimulus (R1 Col c0)</button>
+            <button id="mc-pre-c0" type="button" class="pill-active">FIPS R1 Col c0 (d4 bf 5d 30)</button>
+            <button id="mc-pre-inv" type="button">Round-Trip (04 66 81 e5)</button>
+            <button id="mc-pre-diff" type="button">⚡ 1-Bit Flip (d5 bf 5d 30)</button>
+          </div>
+        </div>
+
+        <div class="grid-12">
+          <!-- Left: Matrix * Column Vector = Output Vector -->
+          <div class="col-5 subcard">
+            <div class="section-title">
+              <span>Column Matrix-Vector Multiply</span>
+              <span class="badge mono">Branch Number = 5</span>
+            </div>
+            <p class="muted" style="font-size: 12px; margin-bottom: 10px;">Edit hex bytes <span
+                class="mono">s0..s3</span> or click any matrix row <span class="mono">r0..r3</span> to inspect its exact
+              hardware XOR/shift tree.</p>
+
+            <div id="mc-rows" style="display: flex; flex-direction: column; gap: 8px;" class="mono"></div>
+
+            <div class="kv-row mt-3 mono">
+              <span class="muted">Column Output [s'0..s'3]:</span>
+              <span id="mc-out-summary" style="font-weight: 700;">04 66 81 e5</span>
+            </div>
+
+            <ul class="rule-list mt-3">
+              <li><strong>GF(2^8) Addition:</strong> Bitwise <span class="mono">XOR (^)</span> with zero carry
+                propagation.</li>
+              <li><strong>Irreducible Polynomial:</strong> <span class="mono">m(x) = x^8 + x^4 + x^3 + x + 1</span>
+                (<span class="mono">8'h1b</span>).</li>
+              <li><strong><span class="mono">xtime(b)</span> ({02}•b):</strong> Shift left by 1 bit; if <span
+                  class="mono">b[7]==1</span>, XOR with <span class="mono">8'h1b</span> (costs only <strong>3 XOR2
+                  gates</strong>!).</li>
+            </ul>
+          </div>
+
+          <!-- Right: Step-by-Step xtime Tree & RTL -->
+          <div class="col-7" style="display: flex; flex-direction: column; gap: 14px; justify-content: space-between;">
+            <div class="subcard">
+              <div class="section-title">
+                <span id="mc-detail-title">Row 0 Hardware Breakdown → s'0</span>
+                <span class="badge badge-accent mono" id="mc-poly-badge">{02, 03, 01, 01}</span>
+              </div>
+              <div id="mc-terms" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;"
+                class="mono"></div>
+              <div id="mc-xor-sum" class="formula-box mono mt-3"></div>
+            </div>
+
+            <div class="subcard">
+              <div class="section-title">
+                <span>Synthesizable SystemVerilog Pattern (Combinational Single-Column Slice)</span>
+                <span class="badge badge-green mono">Zero Multipliers</span>
+              </div>
+              <pre class="rtl-code mono"><span class="cm">// Fundamental GF(2^8) x2 primitive: 3 XOR2 gates, 1 gate-level logic depth!</span>
+<span class="kw">function automatic logic</span> [<span class="num">7</span>:<span class="num">0</span>] <span class="fn">xtime</span>(<span class="kw">input logic</span> [<span class="num">7</span>:<span class="num">0</span>] b);
+  <span class="kw">return</span> {b[<span class="num">6</span>:<span class="num">0</span>], <span class="num">1'b0</span>} ^ (b[<span class="num">7</span>] ? <span class="num">8'h1b</span> : <span class="num">8'h00</span>);
+<span class="kw">endfunction</span>
+
+<span class="cm">// Forward MixColumns: {02}=x2, {03}=x2^b</span>
+<span class="cm">// Inverse InvMixColumns via chained xtime: x2=xtime(b), x4=xtime(x2), x8=xtime(x4)</span>
+<span class="cm">//   {09} = x8 ^ b        | {0b} = x8 ^ x2 ^ b</span>
+<span class="cm">//   {0d} = x8 ^ x4 ^ b   | {0e} = x8 ^ x4 ^ x2</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 4: KEY EXPANSION HARDWARE (FORWARD & REVERSE ON-THE-FLY)          -->
+    <!-- ===================================================================== -->
+    <section id="tab-keyexp" class="tab-panel">
+      <div class="card">
+        <div class="toolbar">
+          <div class="btn-group">
+            <button id="ke-dir-fwd" type="button" class="pill-active">Forward KeyGen: rk_curr → rk_next (RK0 →
+              RK10)</button>
+            <button id="ke-dir-rev" type="button">Reverse KeyGen: rk_curr → rk_prev (RK10 → RK0)</button>
+          </div>
+          <span class="badge badge-accent mono" id="ke-active-key-lbl">Active Secret KEY</span>
+        </div>
+
+        <div class="toolbar" style="padding-bottom: 12px;">
+          <div class="btn-group" id="ke-round-tabs"></div>
+          <span class="badge badge-amber mono" id="ke-sbox-warning">⚠️ Both Forward &amp; Reverse KeyGen use FORWARD
+            S-Box!</span>
+        </div>
+
+        <div class="grid-12">
+          <!-- Left: Non-linear g() Core -->
+          <div class="col-5 subcard">
+            <div class="section-title">
+              <span id="ke-g-title">Non-Linear Core g(rk_curr[3])</span>
+              <span class="badge mono">4× minisoc_aes_sbox</span>
+            </div>
+            <p id="ke-g-subtitle" class="muted" style="font-size: 12px; margin-bottom: 10px;"></p>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;" class="mono">
+              <div class="kv-row">
+                <span class="muted" id="ke-gin-lbl">Input Word:</span>
+                <span id="ke-gin-val" style="font-weight: 700;"></span>
+              </div>
+              <div class="kv-row">
+                <span class="muted">1. RotWord (⋘ 8 bits):</span>
+                <span id="ke-rot-val" style="font-weight: 700;"></span>
+              </div>
+              <div class="kv-row">
+                <span class="muted">2. SubWord (Forward S-Box):</span>
+                <span id="ke-sub-val" style="font-weight: 700;"></span>
+              </div>
+              <div class="kv-row highlight">
+                <span id="ke-rcon-lbl">3. ⊕ Rcon[1] (MSB only):</span>
+                <span id="ke-gout-val" style="font-weight: 700;"></span>
+              </div>
+            </div>
+
+            <div class="formula-box mt-3" style="font-size: 12px;" id="ke-rcon-explain"></div>
+          </div>
+
+          <!-- Right: Register-to-Register Word Cascade + Hardware RTL -->
+          <div class="col-7" style="display: flex; flex-direction: column; gap: 14px; justify-content: space-between;">
+            <div class="subcard">
+              <div class="section-title">
+                <span id="ke-cascade-title">Register Transition: RoundKey[0] → RoundKey[1]</span>
+                <span id="ke-fips-slice" class="muted mono" style="font-size: 12px;">FIPS w[0..3] → w[4..7]</span>
+              </div>
+              <div id="ke-cascade-rows" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;"
+                class="mono"></div>
+              <div class="kv-row highlight mt-3 mono">
+                <span id="ke-out-lbl" style="font-weight: 700;">Target RoundKey[1]:</span>
+                <span id="ke-out-hex" style="font-weight: 700;"></span>
+              </div>
+            </div>
+
+            <div class="subcard">
+              <div class="section-title">
+                <span id="ke-rtl-hdr">Hardware Register-Slice View (No w[0..43] Global Array Needed)</span>
+                <span class="badge badge-green mono">128-bit State Reg</span>
+              </div>
+              <pre id="ke-rtl-code" class="rtl-code mono"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 5: MODES OF OPERATION & IV / COUNTER                              -->
+    <!-- ===================================================================== -->
+    <section id="tab-modes" class="tab-panel">
+      <div class="card">
+        <div class="toolbar">
+          <div class="btn-group" id="md-tabs"></div>
+          <div class="btn-group">
+            <button id="md-op-enc" type="button" class="pill-active">Encrypt (P → C)</button>
+            <button id="md-op-dec" type="button">Decrypt (C → P)</button>
+            <span id="md-leak-badge" class="badge"></span>
+          </div>
+        </div>
+
+        <div class="toolbar" style="padding-bottom: 12px;">
+          <div class="btn-group">
+            <button id="md-eq-blocks" type="button">📋 Set P1 = P0 (Test Pattern Leakage)</button>
+            <button id="md-diff-blocks" type="button">📝 Set P1 != P0 (Distinct Blocks)</button>
+            <button id="md-bump-iv" type="button">🎲 Increment IV (+1)</button>
+          </div>
+          <div class="btn-group mono muted" style="font-size: 12px;">
+            <span id="md-key-lbl"></span>
+            <span>·</span>
+            <span id="md-iv-lbl"></span>
+          </div>
+        </div>
+
+        <!-- 2-Block Chaining Comparison -->
+        <div class="grid-12">
+          <div class="col-6 subcard">
+            <div class="section-title">
+              <span>Block 0 Datapath (128-bit)</span>
+              <span id="md-b0-in-tag" class="mono muted" style="font-size: 12px;"></span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;" class="mono">
+              <div class="kv-row" id="md-b0-step1"></div>
+              <div class="kv-row highlight" id="md-b0-core"></div>
+              <div class="kv-row" id="md-b0-step3"></div>
+            </div>
+          </div>
+
+          <div class="col-6 subcard">
+            <div class="section-title">
+              <span>Block 1 Datapath (128-bit)</span>
+              <span id="md-b1-in-tag" class="mono muted" style="font-size: 12px;"></span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;" class="mono">
+              <div class="kv-row" id="md-b1-step1"></div>
+              <div class="kv-row highlight" id="md-b1-core"></div>
+              <div class="kv-row" id="md-b1-step3"></div>
+            </div>
+          </div>
+
+          <div class="col-12 subcard">
+            <div class="grid-12" style="align-items: center;">
+              <div class="col-7">
+                <div class="section-title">
+                  <span id="md-title-formula"></span>
+                  <span id="md-core-badge" class="badge badge-accent mono"></span>
+                </div>
+                <p id="md-desc" class="muted" style="font-size: 13px;"></p>
+              </div>
+              <div class="col-5">
+                <pre id="md-rtl-mux" class="rtl-code mono"></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 6: HARDWARE RULES & BUS MAPPING CHEAT SHEET                       -->
+    <!-- ===================================================================== -->
+    <section id="tab-rules" class="tab-panel">
+      <div class="grid-12">
+        <!-- Bus Mapper -->
+        <div class="col-5 card">
+          <div class="section-title">
+            <span>128-bit Bus ↔ Column-Major State Mapper</span>
+            <span class="badge badge-accent mono">minisoc_aes_pkg</span>
+          </div>
+          <p class="muted" style="font-size: 13px; margin-bottom: 10px;">
+            Per Block Guide &amp; FIPS-197 Section 3.4: <span class="mono">Word 0 = [127:96] = Column 0</span>. Click
+            any byte below to verify its SystemVerilog slice in <span class="mono">aes_state_t</span>.
+          </p>
+          <div id="map-grid" class="matrix-table mono"></div>
+          <div id="map-detail" class="formula-box mono mt-3"></div>
+          <pre class="rtl-code mono mt-3"><span class="cm">// Packed 128-bit Column-Major State Type (rtl/minisoc_aes/minisoc_aes_pkg.sv)</span>
+<span class="kw">typedef logic</span> [<span class="num">0</span>:<span class="num">3</span>][<span class="num">0</span>:<span class="num">3</span>][<span class="num">7</span>:<span class="num">0</span>] aes_state_t;
+<span class="cm">// state[c][r] == FIPS-197 s[r,c] == flat_bus[127 - 8*(4*c + r) -: 8]</span></pre>
+        </div>
+
+        <!-- Hardware Transformation Reference Table -->
+        <div class="col-7 card">
+          <div class="section-title">
+            <span>MiniSoC AES Hardware Primitives Summary (SAED 32nm @ 2.0 GHz)</span>
+            <span class="badge badge-green mono">T_clk = 500 ps</span>
+          </div>
+          <div style="overflow-x: auto; margin-top: 8px;">
+            <table class="hw-table">
+              <thead>
+                <tr>
+                  <th>Primitive</th>
+                  <th>Hardware Structure</th>
+                  <th>Gate / Delay Profile</th>
+                  <th>Used In</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="mono"><strong>SubBytes / InvSubBytes</strong></td>
+                  <td>16 parallel 256×8-bit constant LUTs (<span class="mono">case</span>)</td>
+                  <td>Synthesizes into compact 2-input MUX/AOI cones; avoids deep GF(2^8) inverter chain to close 500 ps
+                    STA.</td>
+                  <td>Cipher, InvCipher (ECB/CBC/PCBC), Forward S-Box in KeyGen</td>
+                </tr>
+                <tr>
+                  <td class="mono"><strong>ShiftRows / InvShiftRows</strong></td>
+                  <td>Pure wire permutation:<br /><span class="mono">c' = (c ± r) mod 4</span></td>
+                  <td><strong>0 gates, 0 ps logic delay</strong> (routing only). Commutes with SubBytes / InvSubBytes!
+                  </td>
+                  <td>Cipher (left shift), InvCipher (right shift)</td>
+                </tr>
+                <tr>
+                  <td class="mono"><strong>MixColumns</strong></td>
+                  <td>4 parallel column slices using <span class="mono">xtime</span> + 4-way XOR</td>
+                  <td>~3–4 XOR levels per byte (108 XOR2 gates across 128 bits). Omitted in Round 10.</td>
+                  <td>Cipher Rounds 1..9 (and all stream modes CTR/CFB/OFB)</td>
+                </tr>
+                <tr>
+                  <td class="mono"><strong>InvMixColumns</strong></td>
+                  <td>Chained <span class="mono">x2, x4, x8</span> XOR trees (<span class="mono">{0e,0b,0d,09}</span>)
+                  </td>
+                  <td>~5–6 XOR levels per byte; deeper than forward MixColumns — critical STA path in shared datapaths!
+                  </td>
+                  <td>InvCipher Rounds 1..9 (ECB, CBC, PCBC Decrypt only)</td>
+                </tr>
+                <tr>
+                  <td class="mono"><strong>AddRoundKey</strong></td>
+                  <td>128 parallel <span class="mono">XOR2</span> gates (<span class="mono">state ^ rk</span>)</td>
+                  <td>1 XOR2 gate delay; self-inverse (<span class="mono">(x ^ k) ^ k == x</span>).</td>
+                  <td>Every round (R0..R10) in both Cipher and InvCipher</td>
+                </tr>
+                <tr>
+                  <td class="mono"><strong>KeyExpansion</strong></td>
+                  <td><span class="mono">RotWord</span> + 4× Forward S-Box + <span class="mono">Rcon</span> + 3-level
+                    32b XOR cascade</td>
+                  <td>S-Box + 4 XOR levels forward; S-Box + 2 XOR levels in reverse (<span class="mono">RK10 →
+                      RK0</span>).</td>
+                  <td>Key schedule (<span class="mono">RK0..RK10</span>)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <ul class="rule-list mt-3">
+            <li><strong>Synchronous Reset First (QoR Rule):</strong> All sequential datapath, FSM, key-schedule, and
+              IV/chaining registers use <span class="mono">always_ff @(posedge clk) if (!rst_n)</span> to maximize
+              Synopsys DC QoR, enable clean ICG clock gating, and eliminate async recovery/removal arcs at 2.0 GHz.</li>
+            <li><strong>Stream-Mode Hardware Insight:</strong> Modes <span class="mono">CTR</span>, <span
+                class="mono">CFB</span>, and <span class="mono">OFB</span> NEVER invoke <span
+                class="mono">InvCipher</span> — even when <span class="mono">CTRL.OP == DECRYPT</span>, the AES core
+              runs in forward <span class="mono">Cipher</span> direction!</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- SELF-CONTAINED AES-128 ENGINE & INTERACTIVE CONTROLLERS                 -->
+  <!-- ======================================================================= -->
+  <script>
+    // 1. Exact FIPS-197 S-Box & Programmatically Derived Inverse S-Box
+    const SBOX = [
+      0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
+      0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
+      0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15,
+      0x04, 0xc7, 0x23, 0xc3, 0x18, 0x96, 0x05, 0x9a, 0x07, 0x12, 0x80, 0xe2, 0xeb, 0x27, 0xb2, 0x75,
+      0x09, 0x83, 0x2c, 0x1a, 0x1b, 0x6e, 0x5a, 0xa0, 0x52, 0x3b, 0xd6, 0xb3, 0x29, 0xe3, 0x2f, 0x84,
+      0x53, 0xd1, 0x00, 0xed, 0x20, 0xfc, 0xb1, 0x5b, 0x6a, 0xcb, 0xbe, 0x39, 0x4a, 0x4c, 0x58, 0xcf,
+      0xd0, 0xef, 0xaa, 0xfb, 0x43, 0x4d, 0x33, 0x85, 0x45, 0xf9, 0x02, 0x7f, 0x50, 0x3c, 0x9f, 0xa8,
+      0x51, 0xa3, 0x40, 0x8f, 0x92, 0x9d, 0x38, 0xf5, 0xbc, 0xb6, 0xda, 0x21, 0x10, 0xff, 0xf3, 0xd2,
+      0xcd, 0x0c, 0x13, 0xec, 0x5f, 0x97, 0x44, 0x17, 0xc4, 0xa7, 0x7e, 0x3d, 0x64, 0x5d, 0x19, 0x73,
+      0x60, 0x81, 0x4f, 0xdc, 0x22, 0x2a, 0x90, 0x88, 0x46, 0xee, 0xb8, 0x14, 0xde, 0x5e, 0x0b, 0xdb,
+      0xe0, 0x32, 0x3a, 0x0a, 0x49, 0x06, 0x24, 0x5c, 0xc2, 0xd3, 0xac, 0x62, 0x91, 0x95, 0xe4, 0x79,
+      0xe7, 0xc8, 0x37, 0x6d, 0x8d, 0xd5, 0x4e, 0xa9, 0x6c, 0x56, 0xf4, 0xea, 0x65, 0x7a, 0xae, 0x08,
+      0xba, 0x78, 0x25, 0x2e, 0x1c, 0xa6, 0xb4, 0xc6, 0xe8, 0xdd, 0x74, 0x1f, 0x4b, 0xbd, 0x8b, 0x8a,
+      0x70, 0x3e, 0xb5, 0x66, 0x48, 0x03, 0xf6, 0x0e, 0x61, 0x35, 0x57, 0xb9, 0x86, 0xc1, 0x1d, 0x9e,
+      0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
+      0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
+    ];
+    const INV_SBOX = new Array(256);
+    for (let i = 0; i < 256; i++) INV_SBOX[SBOX[i]] = i;
+
+    const RCON = [0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
+    const FIPS_PT = [0x32, 0x43, 0xf6, 0xa8, 0x88, 0x5a, 0x30, 0x8d, 0x31, 0x31, 0x98, 0xa2, 0xe0, 0x37, 0x07, 0x34];
+    const FIPS_KEY = [0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c];
+    const FIPS_CT = [0x39, 0x25, 0x84, 0x1d, 0x02, 0xdc, 0x09, 0xfb, 0xdc, 0x11, 0x85, 0x97, 0x19, 0x6a, 0x0b, 0x32];
+    const FIPS_C1_KEY = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f];
+    const FIPS_C1_PT  = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff];
+    const DEF_IV = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f];
+    const NIST_PT0 = [0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96, 0xe9, 0x3d, 0x7e, 0x11, 0x73, 0x93, 0x17, 0x2a];
+    const NIST_PT1 = [0xae, 0x2d, 0x8a, 0x57, 0x1e, 0x03, 0xac, 0x9c, 0x9e, 0xb7, 0x6f, 0xac, 0x45, 0xaf, 0x8e, 0x51];
+
+    // Shared User-Definable Stimulus State
+    let activeKey = FIPS_KEY.slice();
+    let activeIv = DEF_IV.slice();
+    let activeP0 = FIPS_PT.slice();
+    let activeP1 = FIPS_PT.slice();
+    let activeCtr = [0, 0, 0, 0, 0, 0, 0, 0];
+    let stimPresetName = 'FIPS-197 Appendix B';
+
+    const hex2 = b => b.toString(16).padStart(2, '0');
+    const fullHex = arr => arr.map(hex2).join('');
+    const groupedHex = arr => {
+      const words = [];
+      for (let i = 0; i < arr.length; i += 4) words.push(arr.slice(i, i + 4).map(hex2).join(''));
+      return words.join('_');
+    };
+    const shortHex = arr => arr.slice(0, 3).map(hex2).join('') + '…' + arr.slice(arr.length - 3).map(hex2).join('');
+    const bin8 = b => b.toString(2).padStart(8, '0').replace(/(.{4})(.{4})/, '$1_$2');
+    const xorArr = (a, b) => a.map((v, i) => v ^ b[i]);
+    const xtime = b => ((b << 1) ^ ((b & 0x80) ? 0x1b : 0)) & 0xff;
+
+    function incBytes(arr) {
+      const out = arr.slice();
+      for (let i = out.length - 1; i >= 0; i--) {
+        out[i] = (out[i] + 1) & 0xff;
+        if (out[i] !== 0) break;
+      }
+      return out;
+    }
+
+    function parseHexBytes(rawStr, numBytes) {
+      const cleaned = rawStr.trim()
+        .replace(/^(128'h|64'h|32'h|0x)/i, '')
+        .replace(/[\s_]/g, '');
+      if (cleaned.length === 0 || cleaned.length > numBytes * 2 || !/^[0-9a-fA-F]+$/.test(cleaned)) {
+        return null;
+      }
+      const padded = cleaned.padStart(numBytes * 2, '0').toLowerCase();
+      const out = [];
+      for (let i = 0; i < numBytes; i++) {
+        out.push(parseInt(padded.slice(i * 2, i * 2 + 2), 16));
+      }
+      return { bytes: out, exactLen: cleaned.length === numBytes * 2 };
+    }
+
+    function gfMul(coef, b) {
+      const x1 = b;
+      const x2 = xtime(x1);
+      const x4 = xtime(x2);
+      const x8 = xtime(x4);
+      switch (coef) {
+        case 0x01: return x1;
+        case 0x02: return x2;
+        case 0x03: return x2 ^ x1;
+        case 0x09: return x8 ^ x1;
+        case 0x0b: return x8 ^ x2 ^ x1;
+        case 0x0d: return x8 ^ x4 ^ x1;
+        case 0x0e: return x8 ^ x4 ^ x2;
+        default: return 0;
+      }
+    }
+
+    function expandKey(key) {
+      const w = [];
+      for (let i = 0; i < 4; i++) w.push(key.slice(i * 4, i * 4 + 4));
+      for (let i = 4; i < 44; i++) {
+        let t = w[i - 1].slice();
+        if (i % 4 === 0) t = [SBOX[t[1]] ^ RCON[i / 4], SBOX[t[2]], SBOX[t[3]], SBOX[t[0]]];
+        w.push([w[i - 4][0] ^ t[0], w[i - 4][1] ^ t[1], w[i - 4][2] ^ t[2], w[i - 4][3] ^ t[3]]);
+      }
+      const rks = [];
+      for (let r = 0; r <= 10; r++) rks.push([...w[4 * r], ...w[4 * r + 1], ...w[4 * r + 2], ...w[4 * r + 3]]);
+      return { w, rks };
+    }
+
+    const opSubBytes = s => s.map(b => SBOX[b]);
+    const opInvSubBytes = s => s.map(b => INV_SBOX[b]);
+    const opShiftRows = s => {
+      const out = new Array(16);
+      for (let r = 0; r < 4; r++)
+        for (let c = 0; c < 4; c++)
+          out[c * 4 + r] = s[((c + r) % 4) * 4 + r];
+      return out;
+    };
+    const opInvShiftRows = s => {
+      const out = new Array(16);
+      for (let r = 0; r < 4; r++)
+        for (let c = 0; c < 4; c++)
+          out[c * 4 + r] = s[((c + 4 - r) % 4) * 4 + r];
+      return out;
+    };
+    const opMixCols = (s, inv = false) => {
+      const M = inv
+        ? [[0x0e, 0x0b, 0x0d, 0x09], [0x09, 0x0e, 0x0b, 0x0d], [0x0d, 0x09, 0x0e, 0x0b], [0x0b, 0x0d, 0x09, 0x0e]]
+        : [[0x02, 0x03, 0x01, 0x01], [0x01, 0x02, 0x03, 0x01], [0x01, 0x01, 0x02, 0x03], [0x03, 0x01, 0x01, 0x02]];
+      const out = new Array(16);
+      for (let c = 0; c < 4; c++) {
+        for (let r = 0; r < 4; r++) {
+          out[c * 4 + r] = gfMul(M[r][0], s[c * 4]) ^ gfMul(M[r][1], s[c * 4 + 1]) ^ gfMul(M[r][2], s[c * 4 + 2]) ^ gfMul(M[r][3], s[c * 4 + 3]);
+        }
+      }
+      return out;
+    };
+
+    function aesCipherBlock(pt, key) {
+      const { rks } = expandKey(key);
+      let s = xorArr(pt, rks[0]);
+      for (let r = 1; r <= 10; r++) {
+        s = opSubBytes(s);
+        s = opShiftRows(s);
+        if (r < 10) s = opMixCols(s, false);
+        s = xorArr(s, rks[r]);
+      }
+      return s;
+    }
+
+    function aesInvCipherBlock(ct, key) {
+      const { rks } = expandKey(key);
+      let s = xorArr(ct, rks[10]);
+      for (let r = 1; r <= 10; r++) {
+        s = opInvShiftRows(s);
+        s = opInvSubBytes(s);
+        s = xorArr(s, rks[10 - r]);
+        if (r < 10) s = opMixCols(s, true);
+      }
+      return s;
+    }
+
+    // Theme & Tab Switching
+    document.getElementById('btn-theme').onclick = () => {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      document.getElementById('btn-theme').textContent = next === 'dark' ? '☀️ Light Theme' : '🌙 Dark Theme';
+    };
+
+    document.querySelectorAll('.nav-tab').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      };
+    });
+
+    // =========================================================================
+    // STIMULUS CONTROLLER (SYNCHRONIZES ALL MODULES)
+    // =========================================================================
+    function syncStimulusFields() {
+      document.getElementById('inp-key').value = groupedHex(activeKey);
+      document.getElementById('inp-iv').value = groupedHex(activeIv);
+      document.getElementById('inp-p0').value = groupedHex(activeP0);
+      document.getElementById('inp-p1').value = groupedHex(activeP1);
+      document.getElementById('inp-ctr').value = groupedHex(activeCtr);
+
+      ['key', 'iv', 'p0', 'ctr'].forEach(id => {
+        const inp = document.getElementById('inp-' + id);
+        if (inp) inp.classList.remove('invalid');
+        const st = document.getElementById('stat-' + id);
+        if (st) {
+          st.classList.remove('invalid');
+          st.textContent = id === 'ctr' ? '64-bit valid' : '128-bit valid';
+        }
+      });
+      document.getElementById('inp-p1').classList.remove('invalid');
+      updateStimulusPreview();
+    }
+
+    function updateStimulusPreview() {
+      const ek0 = aesCipherBlock(activeP0, activeKey);
+      document.getElementById('stim-ek-preview').textContent = groupedHex(ek0);
+      document.getElementById('stim-summary-badge').textContent = `Stimulus: ${stimPresetName}`;
+      document.getElementById('stim-pre-fips').className = stimPresetName === 'FIPS-197 Appendix B' ? 'pill-active' : '';
+      document.getElementById('stim-pre-c1').className = stimPresetName === 'FIPS-197 Appendix C.1' ? 'pill-active' : '';
+      document.getElementById('stim-pre-nist').className = stimPresetName === 'NIST SP 800-38A' ? 'pill-active' : '';
+      document.getElementById('stim-pre-zero').className = stimPresetName === 'All-Zero' ? 'pill-active' : '';
+    }
+
+    function renderAllModules() {
+      updateStimulusPreview();
+      if (mcPreset === 'active') {
+        const { rks } = expandKey(activeKey);
+        const r1Sr = opShiftRows(opSubBytes(xorArr(activeP0, rks[0])));
+        mcCol = r1Sr.slice(0, 4);
+      }
+      renderDatapath();
+      renderSbox();
+      renderMixCols();
+      renderKeyExp();
+      renderModes();
+      renderMapper();
+    }
+
+    function bindHexInput(inpId, statId, numBytes, setter) {
+      const el = document.getElementById(inpId);
+      const st = statId ? document.getElementById(statId) : null;
+
+      el.oninput = () => {
+        const parsed = parseHexBytes(el.value, numBytes);
+        if (!parsed) {
+          el.classList.add('invalid');
+          if (st) { st.classList.add('invalid'); st.textContent = 'Invalid hex'; }
+          return;
+        }
+        el.classList.remove('invalid');
+        if (st) {
+          st.classList.remove('invalid');
+          st.textContent = parsed.exactLen ? `${numBytes * 8}-bit valid` : 'Zero-pad on Enter';
+        }
+        if (parsed.exactLen) {
+          stimPresetName = 'Custom User Input';
+          setter(parsed.bytes);
+          renderAllModules();
+        }
+      };
+
+      el.onchange = () => {
+        const parsed = parseHexBytes(el.value, numBytes);
+        if (parsed) {
+          stimPresetName = 'Custom User Input';
+          setter(parsed.bytes);
+          el.value = groupedHex(parsed.bytes);
+          el.classList.remove('invalid');
+          if (st) { st.classList.remove('invalid'); st.textContent = `${numBytes * 8}-bit valid`; }
+          renderAllModules();
+        }
+      };
+    }
+
+    bindHexInput('inp-key', 'stat-key', 16, b => { activeKey = b; });
+    bindHexInput('inp-iv', 'stat-iv', 16, b => { activeIv = b; });
+    bindHexInput('inp-p0', 'stat-p0', 16, b => { activeP0 = b; });
+    bindHexInput('inp-p1', null, 16, b => { activeP1 = b; });
+    bindHexInput('inp-ctr', 'stat-ctr', 8, b => { activeCtr = b; });
+
+    document.getElementById('btn-copy-p0').onclick = () => {
+      activeP1 = activeP0.slice();
+      stimPresetName = 'Custom (P1 = P0)';
+      syncStimulusFields();
+      renderAllModules();
+    };
+
+    document.getElementById('stim-pre-fips').onclick = () => {
+      activeKey = FIPS_KEY.slice();
+      activeIv = DEF_IV.slice();
+      activeP0 = FIPS_PT.slice();
+      activeP1 = FIPS_PT.slice();
+      activeCtr = [0, 0, 0, 0, 0, 0, 0, 0];
+      stimPresetName = 'FIPS-197 Appendix B';
+      syncStimulusFields();
+      renderAllModules();
+    };
+
+    document.getElementById('stim-pre-c1').onclick = () => {
+      activeKey = FIPS_C1_KEY.slice();
+      activeIv = DEF_IV.slice();
+      activeP0 = FIPS_C1_PT.slice();
+      activeP1 = FIPS_C1_PT.slice();
+      activeCtr = [0, 0, 0, 0, 0, 0, 0, 0];
+      stimPresetName = 'FIPS-197 Appendix C.1';
+      syncStimulusFields();
+      renderAllModules();
+    };
+
+    document.getElementById('stim-pre-nist').onclick = () => {
+      activeKey = FIPS_KEY.slice();
+      activeIv = DEF_IV.slice();
+      activeP0 = NIST_PT0.slice();
+      activeP1 = NIST_PT1.slice();
+      activeCtr = [0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7];
+      stimPresetName = 'NIST SP 800-38A';
+      syncStimulusFields();
+      renderAllModules();
+    };
+
+    document.getElementById('stim-pre-zero').onclick = () => {
+      activeKey = new Array(16).fill(0);
+      activeIv = new Array(16).fill(0);
+      activeP0 = new Array(16).fill(0);
+      activeP1 = new Array(16).fill(0);
+      activeCtr = new Array(8).fill(0);
+      stimPresetName = 'All-Zero';
+      syncStimulusFields();
+      renderAllModules();
+    };
+
+    document.getElementById('stim-random').onclick = () => {
+      const rnd = n => Array.from({ length: n }, () => Math.floor(Math.random() * 256));
+      activeKey = rnd(16);
+      activeIv = rnd(16);
+      activeP0 = rnd(16);
+      activeP1 = rnd(16);
+      activeCtr = rnd(8);
+      stimPresetName = 'Random Stimulus';
+      syncStimulusFields();
+      renderAllModules();
+    };
+
+    document.getElementById('stim-toggle').onclick = () => {
+      const body = document.getElementById('stim-body');
+      const hidden = body.classList.toggle('collapsed');
+      document.getElementById('stim-toggle').textContent = hidden ? '▸ Edit Inputs' : '▾ Hide Inputs';
+    };
+
+    // =========================================================================
+    // MODULE 1: DATAPATH & STATE EXPLORER (CIPHER & INVCIPHER)
+    // =========================================================================
+    function buildForwardTrace(pt, rks) {
+      const steps = [];
+      let s = pt.slice(), prev = s.slice();
+      steps.push({ round: 0, op: 'IN', label: 'Round 0 · Input Block', state: s.slice(), prev, rkIdx: 0 });
+      prev = s.slice(); s = xorArr(s, rks[0]);
+      steps.push({ round: 0, op: 'ARK', label: 'Round 0 · AddRoundKey (Whitening)', state: s.slice(), prev, rkIdx: 0 });
+      for (let r = 1; r <= 10; r++) {
+        steps.push({ round: r, op: 'START', label: `Round ${r} · Start of Round`, state: s.slice(), prev: s.slice(), rkIdx: r });
+        prev = s.slice(); s = opSubBytes(s);
+        steps.push({ round: r, op: 'SB', label: `Round ${r} · SubBytes`, state: s.slice(), prev, rkIdx: r });
+        prev = s.slice(); s = opShiftRows(s);
+        steps.push({ round: r, op: 'SR', label: `Round ${r} · ShiftRows`, state: s.slice(), prev, rkIdx: r });
+        if (r < 10) {
+          prev = s.slice(); s = opMixCols(s, false);
+          steps.push({ round: r, op: 'MC', label: `Round ${r} · MixColumns`, state: s.slice(), prev, rkIdx: r });
+        }
+        prev = s.slice(); s = xorArr(s, rks[r]);
+        steps.push({ round: r, op: 'ARK', label: r === 10 ? 'Round 10 · AddRoundKey (Ciphertext)' : `Round ${r} · AddRoundKey`, state: s.slice(), prev, rkIdx: r });
+      }
+      return steps;
+    }
+
+    function buildInverseTrace(ct, rks) {
+      const steps = [];
+      let s = ct.slice(), prev = s.slice();
+      steps.push({ round: 0, op: 'IN', label: 'InvRound 0 · Input Ciphertext', state: s.slice(), prev, rkIdx: 10 });
+      prev = s.slice(); s = xorArr(s, rks[10]);
+      steps.push({ round: 0, op: 'ARK', label: 'InvRound 0 · AddRoundKey (RK[10])', state: s.slice(), prev, rkIdx: 10 });
+      for (let r = 1; r <= 10; r++) {
+        const rkIdx = 10 - r;
+        steps.push({ round: r, op: 'START', label: `InvRound ${r} · Start`, state: s.slice(), prev: s.slice(), rkIdx });
+        prev = s.slice(); s = opInvShiftRows(s);
+        steps.push({ round: r, op: 'ISR', label: `InvRound ${r} · InvShiftRows`, state: s.slice(), prev, rkIdx });
+        prev = s.slice(); s = opInvSubBytes(s);
+        steps.push({ round: r, op: 'ISB', label: `InvRound ${r} · InvSubBytes`, state: s.slice(), prev, rkIdx });
+        prev = s.slice(); s = xorArr(s, rks[rkIdx]);
+        steps.push({ round: r, op: 'ARK', label: r === 10 ? 'InvRound 10 · AddRoundKey (Recovered Plaintext)' : `InvRound ${r} · AddRoundKey (RK[${rkIdx}])`, state: s.slice(), prev, rkIdx });
+        if (r < 10) {
+          prev = s.slice(); s = opMixCols(s, true);
+          steps.push({ round: r, op: 'IMC', label: `InvRound ${r} · InvMixColumns`, state: s.slice(), prev, rkIdx });
+        }
+      }
+      return steps;
+    }
+
+    // dpMode: 'enc' | 'dec_rt' (decrypts E_K(Block 0)) | 'dec_raw' (treats Block 0 directly as ciphertext)
+    let dpMode = 'enc';
+    let dpAvalanche = false;
+    let dpStep = 2; // Start on Round 1 Start
+    let dpSelByte = 0;
+
+    function popcount(x) { let c = 0; while (x) { c += x & 1; x >>= 1; } return c; }
+
+    function renderDatapath() {
+      const keyData = expandKey(activeKey);
+      const dpInverse = dpMode !== 'enc';
+      const baseIn = dpMode === 'enc'
+        ? activeP0
+        : (dpMode === 'dec_rt' ? aesCipherBlock(activeP0, activeKey) : activeP0);
+
+      const pertIn = baseIn.slice(); pertIn[0] ^= 0x01;
+      const refTrace = dpInverse ? buildInverseTrace(baseIn, keyData.rks) : buildForwardTrace(baseIn, keyData.rks);
+      const pertTrace = dpInverse ? buildInverseTrace(pertIn, keyData.rks) : buildForwardTrace(pertIn, keyData.rks);
+
+      if (dpStep >= refTrace.length) dpStep = refTrace.length - 1;
+      const trace = dpAvalanche ? pertTrace : refTrace;
+      const cur = trace[dpStep];
+      const ref = refTrace[dpStep];
+      const rk = keyData.rks[cur.rkIdx];
+
+      document.getElementById('dp-dir-enc').className = dpMode === 'enc' ? 'pill-active' : '';
+      document.getElementById('dp-dir-dec-rt').className = dpMode === 'dec_rt' ? 'pill-active' : '';
+      document.getElementById('dp-dir-dec-raw').className = dpMode === 'dec_raw' ? 'pill-active' : '';
+      document.getElementById('dp-stage-badge').textContent = cur.label;
+
+      const avBtn = document.getElementById('dp-avalanche');
+      avBtn.textContent = dpAvalanche ? `⚡ Flip 1 Input Bit: ON (${hex2(baseIn[0])}→${hex2(pertIn[0])})` : '⚡ Flip 1 Input Bit: OFF';
+      avBtn.className = dpAvalanche ? 'btn-amber' : '';
+
+      let diffBits = 0, diffBytes = 0;
+      for (let i = 0; i < 16; i++) {
+        const d = cur.state[i] ^ ref.state[i];
+        if (d) diffBytes++;
+        diffBits += popcount(d);
+      }
+      const statEl = document.getElementById('dp-avalanche-stat');
+      statEl.textContent = dpAvalanche
+        ? `Hamming Diff: ${diffBits}/128 bits (${diffBytes}/16B)`
+        : stimPresetName;
+      statEl.className = dpAvalanche ? 'badge badge-rose mono' : 'badge mono';
+
+      // Round Pills
+      const rp = document.getElementById('dp-round-pills');
+      rp.innerHTML = '';
+      for (let r = 0; r <= 10; r++) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = dpInverse ? `IR${r}` : `R${r}`;
+        if (cur.round === r) b.className = 'pill-active';
+        b.onclick = () => {
+          const idx = trace.findIndex(st => st.round === r && (r === 0 ? st.op === 'IN' : st.op === 'START'));
+          if (idx >= 0) { dpStep = idx; renderDatapath(); }
+        };
+        rp.appendChild(b);
+      }
+
+      // Op Pills
+      const opEl = document.getElementById('dp-op-pills');
+      opEl.innerHTML = '';
+      const shortLbl = { IN: 'Input', START: 'Start', SB: 'SubBytes', SR: 'ShiftRows', MC: 'MixColumns', ARK: 'AddRoundKey', ISR: 'InvShiftRows', ISB: 'InvSubBytes', IMC: 'InvMixColumns' };
+      trace.map((st, idx) => ({ st, idx })).filter(x => x.st.round === cur.round).forEach(({ st, idx }) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = shortLbl[st.op];
+        if (idx === dpStep) b.className = 'pill-active';
+        b.onclick = () => { dpStep = idx; renderDatapath(); };
+        opEl.appendChild(b);
+      });
+
+      // Matrix
+      const matEl = document.getElementById('dp-matrix');
+      matEl.innerHTML = '';
+      const selR = dpSelByte % 4, selC = Math.floor(dpSelByte / 4);
+      for (let r = 0; r < 4; r++) {
+        const rHdr = document.createElement('div');
+        rHdr.className = 'matrix-hdr';
+        rHdr.textContent = cur.op === 'SR' ? `r${r} ⋘${r}` : (cur.op === 'ISR' ? `r${r} ⋙${r}` : `r${r}`);
+        matEl.appendChild(rHdr);
+
+        for (let c = 0; c < 4; c++) {
+          const idx = c * 4 + r;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          const isDiff = dpAvalanche && (cur.state[idx] !== ref.state[idx]);
+          const isCol = (cur.op === 'MC' || cur.op === 'IMC') && (c === selC);
+          btn.className = [
+            'cell-btn',
+            idx === dpSelByte ? 'selected' : '',
+            isDiff ? 'diff' : (isCol ? 'col-focus' : '')
+          ].join(' ');
+          btn.innerHTML = `<span>${hex2(cur.state[idx])}</span><span class="sub-idx">B${idx}</span>`;
+          btn.onclick = () => { dpSelByte = idx; renderDatapath(); };
+          matEl.appendChild(btn);
+        }
+      }
+
+      const hi = 127 - dpSelByte * 8, lo = hi - 7;
+      document.getElementById('dp-sel-info').textContent = `Byte ${dpSelByte} · s[${selR},${selC}] · [${hi}:${lo}]`;
+      document.getElementById('dp-bus-hex').textContent = groupedHex(cur.state);
+
+      // Step Inspector & RTL
+      const vNow = hex2(cur.state[dpSelByte]);
+      const vPrev = hex2(cur.prev[dpSelByte]);
+      const tEl = document.getElementById('dp-op-title');
+      const mEl = document.getElementById('dp-rtl-module');
+      const dEl = document.getElementById('dp-op-desc');
+      const fEl = document.getElementById('dp-formula');
+      const rtlEl = document.getElementById('dp-rtl-snippet');
+
+      if (cur.op === 'IN' || cur.op === 'START') {
+        tEl.textContent = cur.op === 'IN' ? '128-bit Block Input Mapping' : `Start of ${dpInverse ? 'Inverse ' : ''}Round ${cur.round}`;
+        mEl.textContent = 'aes_state_t';
+        dEl.textContent = 'The 128-bit bus maps column-by-column into s[r,c]: Word 0 ([127:96]) populates Column c0 (rows 0..3), down to Word 3 ([31:0]) in Column c3.';
+        fEl.innerHTML = `<span>Selected Slice: i_state[${hi}:${lo}]</span><strong>s[${selR},${selC}] = 8'h${vNow}</strong>`;
+        rtlEl.innerHTML = `<span class="cm">// Column-major wire view (zero logic gates)</span>\n<span class="kw">typedef logic</span> [<span class="num">0</span>:<span class="num">3</span>][<span class="num">0</span>:<span class="num">3</span>][<span class="num">7</span>:<span class="num">0</span>] aes_state_t;\n<span class="cm">// state[${selC}][${selR}] maps to bus bits [${hi}:${lo}]</span>`;
+      } else if (cur.op === 'SB' || cur.op === 'ISB') {
+        const inv = cur.op === 'ISB';
+        tEl.textContent = inv ? 'InvSubBytes — Inverse Non-Linear S-Box' : 'SubBytes — Non-Linear Byte Substitution';
+        mEl.textContent = inv ? 'minisoc_aes_inv_sub_bytes' : 'minisoc_aes_sub_bytes';
+        dEl.textContent = inv
+          ? 'Applies 16 parallel inverse LUT instances (Inverse Affine Transform followed by GF(2^8) multiplicative inverse) to undo SubBytes.'
+          : 'Applies 16 parallel constant LUT instances (GF(2^8) multiplicative inverse + Affine Transform). Provides cryptographic confusion and closes 500 ps timing via synthesized MUX/AOI cones.';
+        fEl.innerHTML = `<span>${inv ? 'InvSBox' : 'SBox'}(s[${selR},${selC}])</span><strong>8'h${vPrev} → 8'h${vNow}</strong>`;
+        rtlEl.innerHTML = `<span class="kw">genvar</span> i;\n<span class="kw">generate</span>\n  <span class="kw">for</span> (i = <span class="num">0</span>; i &lt; <span class="num">16</span>; i++) <span class="kw">begin</span> : gen_sbox\n    ${inv ? 'minisoc_aes_inv_sbox' : 'minisoc_aes_sbox'} u_sbox (.i_byte(i_state[<span class="num">127</span>-<span class="num">8</span>*i -:<span class="num">8</span>]), .o_byte(o_state[<span class="num">127</span>-<span class="num">8</span>*i -:<span class="num">8</span>]));\n  <span class="kw">end</span>\n<span class="kw">endgenerate</span>`;
+      } else if (cur.op === 'SR' || cur.op === 'ISR') {
+        const inv = cur.op === 'ISR';
+        const srcC = inv ? (selC + 4 - selR) % 4 : (selC + selR) % 4;
+        tEl.textContent = inv ? 'InvShiftRows — Cyclic Right Row Wire Permutation' : 'ShiftRows — Cyclic Left Row Wire Permutation';
+        mEl.textContent = inv ? 'minisoc_aes_inv_shift_rows' : 'minisoc_aes_shift_rows';
+        dEl.textContent = `Pure wire routing (0 gates, 0 ps logic delay): Row r=${selR} shifts ${selR} byte(s) ${inv ? 'right' : 'left'}, dispersing bytes across all 4 columns so the next MixColumns stage achieves full 128-bit diffusion.`;
+        fEl.innerHTML = `<span>Row r=${selR}: s'[${selR},${selC}] &lt;= s[${selR},${srcC}]</span><strong>8'h${hex2(cur.prev[srcC * 4 + selR])} → 8'h${vNow}</strong>`;
+        rtlEl.innerHTML = `<span class="cm">// Pure wiring permutation inside always_comb</span>\n<span class="kw">for</span> (<span class="kw">int</span> c = <span class="num">0</span>; c &lt; <span class="num">4</span>; c++)\n  <span class="kw">for</span> (<span class="kw">int</span> r = <span class="num">0</span>; r &lt; <span class="num">4</span>; r++)\n    s_out[c][r] = s_in[${inv ? '(c + 4 - r) % 4' : '(c + r) % 4'}][r];`;
+      } else if (cur.op === 'MC' || cur.op === 'IMC') {
+        const inv = cur.op === 'IMC';
+        const colInStr = [0, 1, 2, 3].map(r => hex2(cur.prev[selC * 4 + r])).join(' ');
+        const colOutStr = [0, 1, 2, 3].map(r => hex2(cur.state[selC * 4 + r])).join(' ');
+        tEl.textContent = inv ? 'InvMixColumns — Inverse GF(2^8) Column Diffusion' : 'MixColumns — Intra-Column GF(2^8) Diffusion';
+        mEl.textContent = inv ? 'InvMixColumns ({0e,0b,0d,09})' : 'MixColumns ({02,03,01,01})';
+        dEl.textContent = `Each 32-bit column c${selC} is multiplied independently over GF(2^8). Changing 1 input byte alters all 4 output bytes (MDS Branch Number = 5). Open Tab 2 to inspect the exact bit-level xtime tree!`;
+        fEl.innerHTML = `<span>Col c${selC}: [${colInStr}]</span><strong>→ [${colOutStr}]</strong>`;
+        rtlEl.innerHTML = inv
+          ? `<span class="cm">// Chained xtime stages for Column c${selC}: x2=xtime(s), x4=xtime(x2), x8=xtime(x4)</span>\ns_out[${selC}][<span class="num">0</span>] = (x8_0^x4_0^x2_0) ^ (x8_1^x2_1^s1) ^ (x8_2^x4_2^s2) ^ (x8_3^s3);`
+          : `<span class="cm">// Single-column forward slice (c${selC}) using xtime + XOR</span>\ns_out[${selC}][<span class="num">0</span>] = <span class="fn">xtime</span>(s0) ^ (<span class="fn">xtime</span>(s1) ^ s1) ^ s2 ^ s3;`;
+      } else if (cur.op === 'ARK') {
+        const kByte = hex2(rk[dpSelByte]);
+        tEl.textContent = 'AddRoundKey — Bitwise RoundKey Injection';
+        mEl.textContent = '128× XOR2';
+        dEl.textContent = `128-bit parallel XOR with RoundKey[${cur.rkIdx}]. Because XOR is self-inverse ((x ^ k) ^ k == x), the exact same hardware gate performs both encryption and decryption key mixing.`;
+        fEl.innerHTML = `<span>s[${selR},${selC}] ⊕ RK${cur.rkIdx}[${selR},${selC}]</span><strong>8'h${vPrev} ⊕ 8'h${kByte} = 8'h${vNow}</strong>`;
+        rtlEl.innerHTML = `<span class="kw">assign</span> o_state = i_state ^ i_round_key; <span class="cm">// Single XOR2 gate delay across 128 bits</span>`;
+      }
+
+      // Active RoundKey Words
+      document.getElementById('dp-rk-title').textContent = `Active Subkey: RoundKey[${cur.rkIdx}]`;
+      const rkContainer = document.getElementById('dp-rk-words');
+      rkContainer.innerHTML = '';
+      for (let c = 0; c < 4; c++) {
+        const div = document.createElement('div');
+        div.className = `kv-row ${(cur.op === 'ARK' && c === selC) ? 'highlight' : ''}`;
+        div.style.justifyContent = 'center';
+        div.style.fontWeight = '700';
+        div.textContent = rk.slice(c * 4, c * 4 + 4).map(hex2).join('');
+        rkContainer.appendChild(div);
+      }
+
+      document.getElementById('dp-prev').disabled = dpStep === 0;
+      document.getElementById('dp-next').disabled = dpStep === trace.length - 1;
+    }
+
+    document.getElementById('dp-dir-enc').onclick = () => { dpMode = 'enc'; dpStep = 2; renderDatapath(); };
+    document.getElementById('dp-dir-dec-rt').onclick = () => { dpMode = 'dec_rt'; dpStep = 2; renderDatapath(); };
+    document.getElementById('dp-dir-dec-raw').onclick = () => { dpMode = 'dec_raw'; dpStep = 2; renderDatapath(); };
+    document.getElementById('dp-avalanche').onclick = () => { dpAvalanche = !dpAvalanche; renderDatapath(); };
+    document.getElementById('dp-first').onclick = () => { dpStep = 0; renderDatapath(); };
+    document.getElementById('dp-last').onclick = () => { dpStep = 999; renderDatapath(); };
+    document.getElementById('dp-prev').onclick = () => { if (dpStep > 0) { dpStep--; renderDatapath(); } };
+    document.getElementById('dp-next').onclick = () => { dpStep++; renderDatapath(); };
+
+    // =========================================================================
+    // MODULE 2: S-BOX & INVERSE S-BOX EXPLORER
+    // =========================================================================
+    function gfMulPoly(a, b) {
+      let p = 0;
+      for (let i = 0; i < 8; i++) {
+        if (b & 1) p ^= a;
+        const hi = a & 0x80;
+        a = (a << 1) & 0xff;
+        if (hi) a ^= 0x1b;
+        b >>= 1;
+      }
+      return p;
+    }
+
+    const GF_INV = new Array(256).fill(0);
+    for (let i = 1; i < 256; i++) {
+      let base = i, res = 1;
+      for (let k = 0; k < 7; k++) {
+        base = gfMulPoly(base, base);
+        res = gfMulPoly(res, base);
+      }
+      GF_INV[i] = res;
+    }
+
+    function invAffineTransform(y) {
+      let res = 0;
+      const d = 0x05;
+      for (let i = 0; i < 8; i++) {
+        const bit = ((y >> ((i + 2) % 8)) & 1) ^
+          ((y >> ((i + 5) % 8)) & 1) ^
+          ((y >> ((i + 7) % 8)) & 1) ^
+          ((d >> i) & 1);
+        res |= (bit << i);
+      }
+      return res;
+    }
+
+    let sboxInv = false;
+    let sboxByte = 0x53;
+
+    function renderSbox() {
+      const table = sboxInv ? INV_SBOX : SBOX;
+      const curVal = table[sboxByte];
+      const rowHex = (sboxByte >> 4).toString(16);
+      const colHex = (sboxByte & 0xf).toString(16);
+
+      document.getElementById('sb-mode-fwd').className = !sboxInv ? 'pill-active' : '';
+      document.getElementById('sb-mode-inv').className = sboxInv ? 'pill-active' : '';
+      document.getElementById('sb-mode-badge').textContent = sboxInv ? 'Inverse S-Box (FIPS-197 Fig 14)' : 'Forward S-Box (FIPS-197 Fig 7)';
+      document.getElementById('sb-table-title').textContent = sboxInv ? 'Inverse S-Box Table (minisoc_aes_inv_sbox)' : 'Forward S-Box Table (minisoc_aes_sbox)';
+      document.getElementById('sb-coord-badge').textContent = `Row ${rowHex.toUpperCase()}, Col ${colHex.toUpperCase()} → 8'h${hex2(curVal)}`;
+      document.getElementById('sb-inp-byte').value = hex2(sboxByte);
+      document.getElementById('sb-result-tag').textContent = `${sboxInv ? 'InvS' : 'S'}(${hex2(sboxByte)}) = 8'h${hex2(curVal)}`;
+
+      const rtVal = sboxInv ? SBOX[curVal] : INV_SBOX[curVal];
+      const pass = rtVal === sboxByte;
+      const bijBadge = document.getElementById('sb-bijection-badge');
+      bijBadge.textContent = sboxInv ? `S(InvS(${hex2(sboxByte)})) = ${hex2(rtVal)} ${pass ? '✓' : '✗'}` : `InvS(S(${hex2(sboxByte)})) = ${hex2(rtVal)} ${pass ? '✓' : '✗'}`;
+      bijBadge.className = pass ? 'badge badge-green mono' : 'badge badge-rose mono';
+
+      const gridEl = document.getElementById('sb-grid');
+      gridEl.innerHTML = '';
+
+      const corner = document.createElement('div');
+      corner.className = 'sbox-hdr';
+      corner.textContent = 'x\\y';
+      gridEl.appendChild(corner);
+
+      for (let c = 0; c < 16; c++) {
+        const colHdr = document.createElement('div');
+        colHdr.className = `sbox-hdr ${c === (sboxByte & 0xf) ? 'active-axis' : ''}`;
+        colHdr.textContent = c.toString(16);
+        gridEl.appendChild(colHdr);
+      }
+
+      for (let r = 0; r < 16; r++) {
+        const rowHdr = document.createElement('div');
+        rowHdr.className = `sbox-hdr ${r === (sboxByte >> 4) ? 'active-axis' : ''}`;
+        rowHdr.textContent = r.toString(16);
+        gridEl.appendChild(rowHdr);
+
+        for (let c = 0; c < 16; c++) {
+          const idx = (r << 4) | c;
+          const cell = document.createElement('button');
+          cell.type = 'button';
+          const isSel = idx === sboxByte;
+          const isAxis = (r === (sboxByte >> 4)) || (c === (sboxByte & 0xf));
+          cell.className = `sbox-cell ${isSel ? 'selected' : (isAxis ? 'active-rowcol' : '')}`;
+          cell.textContent = hex2(table[idx]);
+          cell.title = `Input: 8'h${hex2(idx)} (Row ${r.toString(16)}, Col ${c.toString(16)}) → Output: 8'h${hex2(table[idx])}`;
+          cell.onclick = () => { sboxByte = idx; renderSbox(); };
+          gridEl.appendChild(cell);
+        }
+      }
+
+      const x = sboxByte;
+      document.getElementById('sb-step0-val').textContent = `8'h${hex2(x)} = ${bin8(x)}_2`;
+
+      if (!sboxInv) {
+        document.getElementById('sb-math-title').textContent = 'Forward S-Box Math: Inversion in GF(2^8) + Affine Transform';
+        document.getElementById('sb-step1-lbl').textContent = 'Step 1: Multiplicative Inverse in GF(2^8)';
+        const invVal = GF_INV[x];
+        document.getElementById('sb-step1-val').textContent = `a = 8'h${hex2(invVal)} = ${bin8(invVal)}_2`;
+        document.getElementById('sb-step2-lbl').textContent = 'Step 2: Affine Transformation over GF(2)';
+        document.getElementById('sb-step2-val').textContent = `s' = (M · a) ⊕ 8'h63 = 8'h${hex2(curVal)}`;
+
+        const bitLines = [];
+        const c = 0x63;
+        for (let i = 7; i >= 0; i--) {
+          const a_i = (invVal >> i) & 1;
+          const a_4 = (invVal >> ((i + 4) % 8)) & 1;
+          const a_5 = (invVal >> ((i + 5) % 8)) & 1;
+          const a_6 = (invVal >> ((i + 6) % 8)) & 1;
+          const a_7 = (invVal >> ((i + 7) % 8)) & 1;
+          const c_i = (c >> i) & 1;
+          const resBit = a_i ^ a_4 ^ a_5 ^ a_6 ^ a_7 ^ c_i;
+          bitLines.push(`b'${i} = a${i}(${a_i}) ⊕ a${(i + 4) % 8}(${a_4}) ⊕ a${(i + 5) % 8}(${a_5}) ⊕ a${(i + 6) % 8}(${a_6}) ⊕ a${(i + 7) % 8}(${a_7}) ⊕ c${i}(${c_i}) = ${resBit}`);
+        }
+        document.getElementById('sb-affine-bits').innerHTML = `<strong>Affine Bit Decomposition: (MSB to LSB)</strong><br/>` + bitLines.join('<br/>');
+      } else {
+        document.getElementById('sb-math-title').textContent = 'Inverse S-Box Math: Inverse Affine Transform + GF(2^8) Inversion';
+        document.getElementById('sb-step1-lbl').textContent = 'Step 1: Inverse Affine Transformation over GF(2)';
+        const affInvVal = invAffineTransform(x);
+        document.getElementById('sb-step1-val').textContent = `a = M⁻¹·(y ⊕ 8'h63) = 8'h${hex2(affInvVal)} = ${bin8(affInvVal)}_2`;
+        document.getElementById('sb-step2-lbl').textContent = 'Step 2: Multiplicative Inverse in GF(2^8)';
+        const invVal = GF_INV[affInvVal];
+        document.getElementById('sb-step2-val').textContent = `s' = a⁻¹ = 8'h${hex2(invVal)}`;
+
+        const bitLines = [];
+        const d = 0x05;
+        for (let i = 7; i >= 0; i--) {
+          const y_2 = (x >> ((i + 2) % 8)) & 1;
+          const y_5 = (x >> ((i + 5) % 8)) & 1;
+          const y_7 = (x >> ((i + 7) % 8)) & 1;
+          const d_i = (d >> i) & 1;
+          const resBit = y_2 ^ y_5 ^ y_7 ^ d_i;
+          bitLines.push(`a${i} = y${(i + 2) % 8}(${y_2}) ⊕ y${(i + 5) % 8}(${y_5}) ⊕ y${(i + 7) % 8}(${y_7}) ⊕ d${i}(${d_i}) = ${resBit}`);
+        }
+        document.getElementById('sb-affine-bits').innerHTML = `<strong>Inverse Affine Bit Decomposition: (MSB to LSB)</strong><br/>` + bitLines.join('<br/>');
+      }
+    }
+
+    document.getElementById('sb-mode-fwd').onclick = () => { sboxInv = false; renderSbox(); };
+    document.getElementById('sb-mode-inv').onclick = () => { sboxInv = true; renderSbox(); };
+    document.getElementById('sb-pre-53').onclick = () => { sboxByte = 0x53; renderSbox(); };
+    document.getElementById('sb-pre-00').onclick = () => { sboxByte = 0x00; renderSbox(); };
+    document.getElementById('sb-pre-19').onclick = () => { sboxByte = 0x19; renderSbox(); };
+    document.getElementById('sb-pre-b0').onclick = () => { sboxByte = activeP0[0]; renderSbox(); };
+    document.getElementById('sb-inv-check').onclick = () => {
+      const table = sboxInv ? INV_SBOX : SBOX;
+      const res = table[sboxByte];
+      sboxInv = !sboxInv;
+      sboxByte = res;
+      renderSbox();
+    };
+    document.getElementById('sb-inp-byte').onchange = (e) => {
+      const v = parseInt(e.target.value, 16);
+      if (!Number.isNaN(v) && v >= 0 && v <= 255) {
+        sboxByte = v;
+        renderSbox();
+      }
+    };
+
+    // =========================================================================
+    // MODULE 3: GF(2^8) MIXCOLUMNS & INVMIXCOLUMNS CALCULATOR
+    // =========================================================================
+    let mcInv = false;
+    let mcCol = [0xd4, 0xbf, 0x5d, 0x30];
+    let mcSelRow = 0;
+    let mcPreset = 'c0';
+
+    function renderMixCols() {
+      const M = mcInv
+        ? [[0x0e, 0x0b, 0x0d, 0x09], [0x09, 0x0e, 0x0b, 0x0d], [0x0d, 0x09, 0x0e, 0x0b], [0x0b, 0x0d, 0x09, 0x0e]]
+        : [[0x02, 0x03, 0x01, 0x01], [0x01, 0x02, 0x03, 0x01], [0x01, 0x01, 0x02, 0x03], [0x03, 0x01, 0x01, 0x02]];
+      const out = M.map(row => gfMul(row[0], mcCol[0]) ^ gfMul(row[1], mcCol[1]) ^ gfMul(row[2], mcCol[2]) ^ gfMul(row[3], mcCol[3]));
+
+      document.getElementById('mc-mode-fwd').className = !mcInv ? 'pill-active' : '';
+      document.getElementById('mc-mode-inv').className = mcInv ? 'pill-active' : '';
+      document.getElementById('mc-pre-active').className = mcPreset === 'active' ? 'pill-active' : '';
+      document.getElementById('mc-pre-c0').className = mcPreset === 'c0' ? 'pill-active' : '';
+      document.getElementById('mc-pre-inv').className = mcPreset === 'inv' ? 'pill-active' : '';
+      document.getElementById('mc-pre-diff').className = mcPreset === 'diff' ? 'btn-amber' : '';
+
+      const rowsEl = document.getElementById('mc-rows');
+      rowsEl.innerHTML = '';
+      for (let r = 0; r < 4; r++) {
+        const line = document.createElement('div');
+        line.style.display = 'flex';
+        line.style.alignItems = 'center';
+        line.style.justifyContent = 'space-between';
+        line.style.gap = '8px';
+
+        const matBtn = document.createElement('button');
+        matBtn.type = 'button';
+        matBtn.className = r === mcSelRow ? 'pill-active mono' : 'mono';
+        matBtn.textContent = `[ ${M[r].map(hex2).join(' ')} ]`;
+        matBtn.onclick = () => { mcSelRow = r; renderMixCols(); };
+
+        const inBox = document.createElement('div');
+        inBox.style.display = 'flex';
+        inBox.style.alignItems = 'center';
+        inBox.style.gap = '6px';
+        const lbl = document.createElement('span');
+        lbl.className = 'muted';
+        lbl.textContent = `s${r}=`;
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.maxLength = 2;
+        inp.value = hex2(mcCol[r]);
+        inp.className = 'hex-input mono';
+        inp.onchange = e => {
+          const v = parseInt(e.target.value, 16);
+          if (!Number.isNaN(v) && v >= 0 && v <= 255) { mcCol[r] = v; mcPreset = 'custom'; }
+          renderMixCols();
+        };
+        inBox.appendChild(lbl);
+        inBox.appendChild(inp);
+
+        const outBtn = document.createElement('button');
+        outBtn.type = 'button';
+        outBtn.className = r === mcSelRow ? 'pill-active mono' : 'mono';
+        outBtn.textContent = `s'${r} = ${hex2(out[r])}`;
+        outBtn.onclick = () => { mcSelRow = r; renderMixCols(); };
+
+        line.appendChild(matBtn);
+        line.appendChild(inBox);
+        line.appendChild(outBtn);
+        rowsEl.appendChild(line);
+      }
+
+      document.getElementById('mc-out-summary').textContent = out.map(hex2).join(' ');
+      document.getElementById('mc-detail-title').textContent = `Row ${mcSelRow} Hardware Breakdown → s'${mcSelRow} = 8'h${hex2(out[mcSelRow])}`;
+      document.getElementById('mc-poly-badge').textContent = `Row ${mcSelRow}: { ${M[mcSelRow].map(hex2).join(', ')} }`;
+
+      const termsEl = document.getElementById('mc-terms');
+      termsEl.innerHTML = '';
+      const prods = [];
+      for (let k = 0; k < 4; k++) {
+        const coef = M[mcSelRow][k];
+        const b = mcCol[k];
+        const x2 = xtime(b), x4 = xtime(x2), x8 = xtime(x4);
+        const p = gfMul(coef, b);
+        prods.push(p);
+        const msb = (b & 0x80) !== 0;
+
+        let detail = '';
+        if (coef === 0x01) detail = `Identity wire → 8'h${hex2(b)}`;
+        else if (coef === 0x02) detail = msb ? `MSB=1: (${hex2(b)}<<1)=${hex2((b << 1) & 0xff)} ⊕ 1b = ${hex2(x2)}` : `MSB=0: (${hex2(b)}<<1) = ${hex2(x2)} (no ⊕1b)`;
+        else if (coef === 0x03) detail = `xtime(${hex2(b)})=${hex2(x2)} (${msb ? 'with ⊕1b' : 'pure <<1'}) ⊕ ${hex2(b)} = ${hex2(p)}`;
+        else if (coef === 0x09) detail = `x8(${hex2(x8)}) ⊕ x1(${hex2(b)}) = ${hex2(p)}`;
+        else if (coef === 0x0b) detail = `x8(${hex2(x8)}) ⊕ x2(${hex2(x2)}) ⊕ x1(${hex2(b)}) = ${hex2(p)}`;
+        else if (coef === 0x0d) detail = `x8(${hex2(x8)}) ⊕ x4(${hex2(x4)}) ⊕ x1(${hex2(b)}) = ${hex2(p)}`;
+        else if (coef === 0x0e) detail = `x8(${hex2(x8)}) ⊕ x4(${hex2(x4)}) ⊕ x2(${hex2(x2)}) = ${hex2(p)}`;
+
+        const row = document.createElement('div');
+        row.className = 'kv-row';
+        row.innerHTML = `
+          <span style="font-weight:700;">{${hex2(coef)}} • ${hex2(b)}</span>
+          <span class="muted">${detail}</span>
+          <span style="font-weight:700;">= 8'h${hex2(p)}</span>
+        `;
+        termsEl.appendChild(row);
+      }
+
+      document.getElementById('mc-xor-sum').innerHTML = `
+        <span>4-Input XOR Tree: ${prods.map(hex2).join(' ⊕ ')}</span>
+        <strong>s'${mcSelRow} = 8'h${hex2(out[mcSelRow])} (${bin8(out[mcSelRow])})</strong>
+      `;
+    }
+
+    document.getElementById('mc-mode-fwd').onclick = () => { mcInv = false; renderMixCols(); };
+    document.getElementById('mc-mode-inv').onclick = () => { mcInv = true; renderMixCols(); };
+    document.getElementById('mc-pre-active').onclick = () => {
+      mcInv = false;
+      const { rks } = expandKey(activeKey);
+      const r1Sr = opShiftRows(opSubBytes(xorArr(activeP0, rks[0])));
+      mcCol = r1Sr.slice(0, 4);
+      mcPreset = 'active';
+      renderMixCols();
+    };
+    document.getElementById('mc-pre-c0').onclick = () => { mcInv = false; mcCol = [0xd4, 0xbf, 0x5d, 0x30]; mcPreset = 'c0'; renderMixCols(); };
+    document.getElementById('mc-pre-inv').onclick = () => { mcInv = true; mcCol = [0x04, 0x66, 0x81, 0xe5]; mcPreset = 'inv'; renderMixCols(); };
+    document.getElementById('mc-pre-diff').onclick = () => { mcInv = false; mcCol = [0xd5, 0xbf, 0x5d, 0x30]; mcPreset = 'diff'; renderMixCols(); };
+
+    // =========================================================================
+    // MODULE 4: KEY EXPANSION HARDWARE (FORWARD & REVERSE)
+    // =========================================================================
+    let keReverse = false;
+    let keRound = 1; // 1..10
+
+    function renderKeyExp() {
+      const { w, rks } = expandKey(activeKey);
+      const r = keRound;
+
+      document.getElementById('ke-dir-fwd').className = !keReverse ? 'pill-active' : '';
+      document.getElementById('ke-dir-rev').className = keReverse ? 'pill-active' : '';
+      document.getElementById('ke-active-key-lbl').textContent = `KEY: ${groupedHex(activeKey)}`;
+
+      const tabsEl = document.getElementById('ke-round-tabs');
+      tabsEl.innerHTML = '';
+      for (let i = 1; i <= 10; i++) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = keReverse ? `RK${11 - i}→RK${10 - i}` : `RK${i - 1}→RK${i}`;
+        const targetR = keReverse ? (11 - i) : i;
+        b.className = targetR === r ? 'pill-active mono' : 'mono';
+        b.onclick = () => { keRound = targetR; renderKeyExp(); };
+        tabsEl.appendChild(b);
+      }
+
+      const prevWords = [w[4 * (r - 1)], w[4 * (r - 1) + 1], w[4 * (r - 1) + 2], w[4 * (r - 1) + 3]];
+      const nextWords = [w[4 * r], w[4 * r + 1], w[4 * r + 2], w[4 * r + 3]];
+
+      const gIn = prevWords[3];
+      const rot = [gIn[1], gIn[2], gIn[3], gIn[0]];
+      const sub = rot.map(b => SBOX[b]);
+      const gOut = [sub[0] ^ RCON[r], sub[1], sub[2], sub[3]];
+      const fmtSp = arr => arr.map(hex2).join(' ');
+      const fmtW = arr => arr.map(hex2).join('');
+
+      document.getElementById('ke-g-title').textContent = keReverse
+        ? `Non-Linear Core g(rk_prev[3]) · Step RK${r} → RK${r - 1}`
+        : `Non-Linear Core g(rk_curr[3]) · Step RK${r - 1} → RK${r}`;
+      document.getElementById('ke-g-subtitle').textContent = keReverse
+        ? `In reverse mode, rk_prev[3] is recovered first via (rk_curr[3] ^ rk_curr[2]), then fed into the SAME forward g() function!`
+        : `Only the last 32-bit word of RoundKey[${r - 1}] enters g(); the other 3 words use pure XOR gates.`;
+
+      document.getElementById('ke-gin-lbl').textContent = keReverse ? `Recovered rk_prev[3] (w[${4 * r - 1}]):` : `Input rk_curr[3] (w[${4 * r - 1}]):`;
+      document.getElementById('ke-gin-val').textContent = fmtSp(gIn);
+      document.getElementById('ke-rot-val').textContent = fmtSp(rot);
+      document.getElementById('ke-sub-val').textContent = fmtSp(sub);
+      document.getElementById('ke-rcon-lbl').textContent = `3. ⊕ Rcon[${r}] (${hex2(RCON[r])} 00 00 00):`;
+      document.getElementById('ke-gout-val').textContent = fmtSp(gOut);
+
+      document.getElementById('ke-rcon-explain').innerHTML = r >= 9
+        ? `<span><strong>GF(2^8) Rcon Reduction:</strong> Rcon[8]=8'h80 → xtime(8'h80) = 8'h1b (Rcon[9]) → xtime(8'h1b) = 8'h36 (Rcon[10]).</span>`
+        : `<span><strong>Rcon[${r}] = 8'h${hex2(RCON[r])}:</strong> Generated on-the-fly via <span class="mono">rcon_next = xtime(rcon_q)</span>; breaks inter-round symmetry even for an all-zero key.</span>`;
+
+      const casEl = document.getElementById('ke-cascade-rows');
+      casEl.innerHTML = '';
+
+      if (!keReverse) {
+        document.getElementById('ke-cascade-title').textContent = `Forward Register Step: RoundKey[${r - 1}] → RoundKey[${r}]`;
+        document.getElementById('ke-fips-slice').textContent = `FIPS-197 w[${4 * (r - 1)}..${4 * r - 1}] → w[${4 * r}..${4 * r + 3}]`;
+        for (let k = 0; k < 4; k++) {
+          const row = document.createElement('div');
+          row.className = `kv-row ${k === 0 ? 'highlight' : ''}`;
+          if (k === 0) {
+            row.innerHTML = `<span><strong>rk_next[0]</strong> (w[${4 * r}])</span><span class="muted">rk_curr[0] (${fmtW(prevWords[0])}) ⊕ g_out (${fmtW(gOut)})</span><strong>= ${fmtW(nextWords[0])}</strong>`;
+          } else {
+            row.innerHTML = `<span><strong>rk_next[${k}]</strong> (w[${4 * r + k}])</span><span class="muted">rk_curr[${k}] (${fmtW(prevWords[k])}) ⊕ rk_next[${k - 1}] (${fmtW(nextWords[k - 1])})</span><strong>= ${fmtW(nextWords[k])}</strong>`;
+          }
+          casEl.appendChild(row);
+        }
+        document.getElementById('ke-out-lbl').textContent = `Generated RoundKey[${r}]:`;
+        document.getElementById('ke-out-hex').textContent = groupedHex(rks[r]);
+        document.getElementById('ke-rtl-code').innerHTML = `<span class="cm">// Forward On-the-Fly Key Schedule (1 round per clock cycle)</span>\ng_out      = <span class="fn">sub_word</span>(<span class="fn">rot_word</span>(rk_curr[<span class="num">3</span>])) ^ {rcon_q, <span class="num">24'h0</span>};\nrk_next[<span class="num">0</span>] = rk_curr[<span class="num">0</span>] ^ g_out;\nrk_next[<span class="num">1</span>] = rk_curr[<span class="num">1</span>] ^ rk_next[<span class="num">0</span>]; <span class="cm">// Combinational tap from rk_next[0]</span>\nrk_next[<span class="num">2</span>] = rk_curr[<span class="num">2</span>] ^ rk_next[<span class="num">1</span>];\nrk_next[<span class="num">3</span>] = rk_curr[<span class="num">3</span>] ^ rk_next[<span class="num">2</span>];`;
+      } else {
+        document.getElementById('ke-cascade-title').textContent = `Reverse Register Step: RoundKey[${r}] → RoundKey[${r - 1}]`;
+        document.getElementById('ke-fips-slice').textContent = `FIPS-197 w[${4 * r}..${4 * r + 3}] → w[${4 * (r - 1)}..${4 * r - 1}]`;
+        [3, 2, 1, 0].forEach(k => {
+          const row = document.createElement('div');
+          row.className = `kv-row ${k === 0 ? 'highlight' : ''}`;
+          if (k > 0) {
+            row.innerHTML = `<span><strong>rk_prev[${k}]</strong> (w[${4 * (r - 1) + k}])</span><span class="muted">rk_curr[${k}] (${fmtW(nextWords[k])}) ⊕ rk_curr[${k - 1}] (${fmtW(nextWords[k - 1])})</span><strong>= ${fmtW(prevWords[k])}</strong>`;
+          } else {
+            row.innerHTML = `<span><strong>rk_prev[0]</strong> (w[${4 * (r - 1)}])</span><span class="muted">rk_curr[0] (${fmtW(nextWords[0])}) ⊕ g(rk_prev[3]) (${fmtW(gOut)})</span><strong>= ${fmtW(prevWords[0])}</strong>`;
+          }
+          casEl.appendChild(row);
+        });
+        document.getElementById('ke-out-lbl').textContent = `Recovered RoundKey[${r - 1}]:`;
+        document.getElementById('ke-out-hex').textContent = groupedHex(rks[r - 1]);
+        document.getElementById('ke-rtl-code').innerHTML = `<span class="cm">// Reverse On-the-Fly Key Schedule (starts from stored RoundKey[10])</span>\nrk_prev[<span class="num">3</span>] = rk_curr[<span class="num">3</span>] ^ rk_curr[<span class="num">2</span>]; <span class="cm">// Parallel 1-XOR depth!</span>\nrk_prev[<span class="num">2</span>] = rk_curr[<span class="num">2</span>] ^ rk_curr[<span class="num">1</span>];\nrk_prev[<span class="num">1</span>] = rk_curr[<span class="num">1</span>] ^ rk_curr[<span class="num">0</span>];\ng_out      = <span class="fn">sub_word</span>(<span class="fn">rot_word</span>(rk_prev[<span class="num">3</span>])) ^ {rcon_q, <span class="num">24'h0</span>}; <span class="cm">// Forward S-Box!</span>\nrk_prev[<span class="num">0</span>] = rk_curr[<span class="num">0</span>] ^ g_out;`;
+      }
+    }
+
+    document.getElementById('ke-dir-fwd').onclick = () => { keReverse = false; keRound = 1; renderKeyExp(); };
+    document.getElementById('ke-dir-rev').onclick = () => { keReverse = true; keRound = 10; renderKeyExp(); };
+
+    // =========================================================================
+    // MODULE 5: MODES OF OPERATION & IV / COUNTER
+    // =========================================================================
+    const ALL_MODES = ['ECB', 'CBC', 'PCBC', 'CFB', 'OFB', 'CTR'];
+    let mdMode = 'CBC';
+    let mdDecrypt = false;
+
+    function renderModes() {
+      const key = activeKey;
+      const iv = activeIv;
+      const p0 = activeP0;
+      const p1 = activeP1;
+      const ctr0 = [0, 0, 0, 0, 0, 0, 0, 0, ...activeCtr];
+      const ctr1 = [0, 0, 0, 0, 0, 0, 0, 0, ...incBytes(activeCtr)];
+
+      const tabsEl = document.getElementById('md-tabs');
+      tabsEl.innerHTML = '';
+      ALL_MODES.forEach(m => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = m;
+        if (m === mdMode) b.className = 'pill-active';
+        b.onclick = () => { mdMode = m; renderModes(); };
+        tabsEl.appendChild(b);
+      });
+
+      document.getElementById('md-op-enc').className = !mdDecrypt ? 'pill-active' : '';
+      document.getElementById('md-op-dec').className = mdDecrypt ? 'pill-active' : '';
+      document.getElementById('md-key-lbl').textContent = `KEY: ${shortHex(key)}`;
+      document.getElementById('md-iv-lbl').textContent = mdMode === 'ECB' ? 'IV: unused in ECB' : `IV: ${shortHex(iv)}`;
+
+      // Compute forward encryption (P0, P1) -> (C0, C1)
+      let c0, c1, coreIn0, coreOut0, coreIn1, coreOut1;
+      if (mdMode === 'ECB') {
+        coreIn0 = p0; coreOut0 = aesCipherBlock(coreIn0, key); c0 = coreOut0;
+        coreIn1 = p1; coreOut1 = aesCipherBlock(coreIn1, key); c1 = coreOut1;
+      } else if (mdMode === 'CBC') {
+        coreIn0 = xorArr(p0, iv); coreOut0 = aesCipherBlock(coreIn0, key); c0 = coreOut0;
+        coreIn1 = xorArr(p1, c0); coreOut1 = aesCipherBlock(coreIn1, key); c1 = coreOut1;
+      } else if (mdMode === 'PCBC') {
+        coreIn0 = xorArr(p0, iv); coreOut0 = aesCipherBlock(coreIn0, key); c0 = coreOut0;
+        coreIn1 = xorArr(p1, xorArr(p0, c0)); coreOut1 = aesCipherBlock(coreIn1, key); c1 = coreOut1;
+      } else if (mdMode === 'CFB') {
+        coreIn0 = iv; coreOut0 = aesCipherBlock(coreIn0, key); c0 = xorArr(p0, coreOut0);
+        coreIn1 = c0; coreOut1 = aesCipherBlock(coreIn1, key); c1 = xorArr(p1, coreOut1);
+      } else if (mdMode === 'OFB') {
+        coreIn0 = iv; coreOut0 = aesCipherBlock(coreIn0, key); c0 = xorArr(p0, coreOut0);
+        coreIn1 = coreOut0; coreOut1 = aesCipherBlock(coreIn1, key); c1 = xorArr(p1, coreOut1);
+      } else if (mdMode === 'CTR') {
+        coreIn0 = xorArr(iv, ctr0); coreOut0 = aesCipherBlock(coreIn0, key); c0 = xorArr(p0, coreOut0);
+        coreIn1 = xorArr(iv, ctr1); coreOut1 = aesCipherBlock(coreIn1, key); c1 = xorArr(p1, coreOut1);
+      }
+
+      const leaked = fullHex(c0) === fullHex(c1);
+      const leakBadge = document.getElementById('md-leak-badge');
+      leakBadge.textContent = leaked ? '⚠️ Pattern Leak: C0 == C1' : '✅ Distinct Outputs: C0 != C1';
+      leakBadge.className = leaked ? 'badge badge-rose mono' : 'badge badge-green mono';
+
+      const usesInvCore = mdDecrypt && (mdMode === 'ECB' || mdMode === 'CBC' || mdMode === 'PCBC');
+      const coreName = usesInvCore ? 'InvCipher D_K' : 'Cipher E_K';
+      document.getElementById('md-core-badge').textContent = `Core Primitive: ${coreName}`;
+
+      const b0In = document.getElementById('md-b0-in-tag');
+      const b1In = document.getElementById('md-b1-in-tag');
+      const b0s1 = document.getElementById('md-b0-step1'), b0cr = document.getElementById('md-b0-core'), b0s3 = document.getElementById('md-b0-step3');
+      const b1s1 = document.getElementById('md-b1-step1'), b1cr = document.getElementById('md-b1-core'), b1s3 = document.getElementById('md-b1-step3');
+
+      if (!mdDecrypt) {
+        b0In.textContent = `P0: ${groupedHex(p0)}`;
+        b1In.textContent = `P1: ${groupedHex(p1)}`;
+        b0cr.innerHTML = `<span>⚙️ ${coreName} Out</span><strong>${groupedHex(coreOut0)}</strong>`;
+        b1cr.innerHTML = `<span>⚙️ ${coreName} Out</span><strong>${groupedHex(coreOut1)}</strong>`;
+        b0s3.className = `kv-row ${leaked ? 'leak' : ''}`;
+        b1s3.className = `kv-row ${leaked ? 'leak' : ''}`;
+
+        if (mdMode === 'ECB') {
+          b0s1.innerHTML = `<span class="muted">Core In = P0 (no IV)</span><span>${groupedHex(coreIn0)}</span>`;
+          b1s1.innerHTML = `<span class="muted">Core In = P1 (no chain)</span><span>${groupedHex(coreIn1)}</span>`;
+          b0s3.innerHTML = `<span>C0</span><strong>${groupedHex(c0)}</strong>`;
+          b1s3.innerHTML = `<span>C1</span><strong>${groupedHex(c1)}</strong>`;
+        } else if (mdMode === 'CBC') {
+          b0s1.innerHTML = `<span class="muted">P0 ⊕ IV</span><span>${groupedHex(coreIn0)}</span>`;
+          b1s1.innerHTML = `<span class="muted">P1 ⊕ C0</span><span>${groupedHex(coreIn1)}</span>`;
+          b0s3.innerHTML = `<span>C0</span><strong>${groupedHex(c0)}</strong>`;
+          b1s3.innerHTML = `<span>C1</span><strong>${groupedHex(c1)}</strong>`;
+        } else if (mdMode === 'PCBC') {
+          b0s1.innerHTML = `<span class="muted">P0 ⊕ IV</span><span>${groupedHex(coreIn0)}</span>`;
+          b1s1.innerHTML = `<span class="muted">P1 ⊕ (P0 ⊕ C0)</span><span>${groupedHex(coreIn1)}</span>`;
+          b0s3.innerHTML = `<span>C0</span><strong>${groupedHex(c0)}</strong>`;
+          b1s3.innerHTML = `<span>C1</span><strong>${groupedHex(c1)}</strong>`;
+        } else if (mdMode === 'CFB') {
+          b0s1.innerHTML = `<span class="muted">Core In = IV</span><span>${groupedHex(coreIn0)}</span>`;
+          b1s1.innerHTML = `<span class="muted">Feedback = C0</span><span>${groupedHex(coreIn1)}</span>`;
+          b0s3.innerHTML = `<span>C0 = P0 ⊕ KS0</span><strong>${groupedHex(c0)}</strong>`;
+          b1s3.innerHTML = `<span>C1 = P1 ⊕ KS1</span><strong>${groupedHex(c1)}</strong>`;
+        } else if (mdMode === 'OFB') {
+          b0s1.innerHTML = `<span class="muted">Core In = IV</span><span>${groupedHex(coreIn0)}</span>`;
+          b1s1.innerHTML = `<span class="muted">Feedback = O0</span><span>${groupedHex(coreIn1)}</span>`;
+          b0s3.innerHTML = `<span>C0 = P0 ⊕ O0</span><strong>${groupedHex(c0)}</strong>`;
+          b1s3.innerHTML = `<span>C1 = P1 ⊕ O1</span><strong>${groupedHex(c1)}</strong>`;
+        } else if (mdMode === 'CTR') {
+          b0s1.innerHTML = `<span class="muted">IV ⊕ {0, Cnt0}</span><span>${groupedHex(coreIn0)}</span>`;
+          b1s1.innerHTML = `<span class="muted">IV ⊕ {0, Cnt0+1}</span><span>${groupedHex(coreIn1)}</span>`;
+          b0s3.innerHTML = `<span>C0 = P0 ⊕ KS0</span><strong>${groupedHex(c0)}</strong>`;
+          b1s3.innerHTML = `<span>C1 = P1 ⊕ KS1</span><strong>${groupedHex(c1)}</strong>`;
+        }
+      } else {
+        b0In.textContent = `C0: ${groupedHex(c0)}`;
+        b1In.textContent = `C1: ${groupedHex(c1)}`;
+        b0s3.className = 'kv-row';
+        b1s3.className = 'kv-row';
+
+        if (mdMode === 'ECB') {
+          const d0 = aesInvCipherBlock(c0, key), d1 = aesInvCipherBlock(c1, key);
+          b0s1.innerHTML = `<span class="muted">Core In = C0</span><span>${groupedHex(c0)}</span>`;
+          b1s1.innerHTML = `<span class="muted">Core In = C1</span><span>${groupedHex(c1)}</span>`;
+          b0cr.innerHTML = `<span>⚙️ ${coreName} Out</span><strong>${groupedHex(d0)}</strong>`;
+          b1cr.innerHTML = `<span>⚙️ ${coreName} Out</span><strong>${groupedHex(d1)}</strong>`;
+          b0s3.innerHTML = `<span>P0 = D_K(C0)</span><strong>${groupedHex(d0)}</strong>`;
+          b1s3.innerHTML = `<span>P1 = D_K(C1)</span><strong>${groupedHex(d1)}</strong>`;
+        } else if (mdMode === 'CBC') {
+          const d0 = aesInvCipherBlock(c0, key), d1 = aesInvCipherBlock(c1, key);
+          b0s1.innerHTML = `<span class="muted">Core In = C0</span><span>${groupedHex(c0)}</span>`;
+          b1s1.innerHTML = `<span class="muted">Core In = C1</span><span>${groupedHex(c1)}</span>`;
+          b0cr.innerHTML = `<span>⚙️ ${coreName} Out</span><strong>${groupedHex(d0)}</strong>`;
+          b1cr.innerHTML = `<span>⚙️ ${coreName} Out</span><strong>${groupedHex(d1)}</strong>`;
+          b0s3.innerHTML = `<span>P0 = D_K(C0) ⊕ IV</span><strong>${groupedHex(xorArr(d0, iv))}</strong>`;
+          b1s3.innerHTML = `<span>P1 = D_K(C1) ⊕ C0</span><strong>${groupedHex(xorArr(d1, c0))}</strong>`;
+        } else if (mdMode === 'PCBC') {
+          const d0 = aesInvCipherBlock(c0, key), d1 = aesInvCipherBlock(c1, key);
+          const recP0 = xorArr(d0, iv);
+          const recP1 = xorArr(d1, xorArr(recP0, c0));
+          b0s1.innerHTML = `<span class="muted">Core In = C0</span><span>${groupedHex(c0)}</span>`;
+          b1s1.innerHTML = `<span class="muted">Core In = C1</span><span>${groupedHex(c1)}</span>`;
+          b0cr.innerHTML = `<span>⚙️ ${coreName} Out</span><strong>${groupedHex(d0)}</strong>`;
+          b1cr.innerHTML = `<span>⚙️ ${coreName} Out</span><strong>${groupedHex(d1)}</strong>`;
+          b0s3.innerHTML = `<span>P0 = D_K(C0) ⊕ IV</span><strong>${groupedHex(recP0)}</strong>`;
+          b1s3.innerHTML = `<span>P1 = D_K(C1) ⊕ P0 ⊕ C0</span><strong>${groupedHex(recP1)}</strong>`;
+        } else {
+          b0s1.innerHTML = `<span class="muted">Core In = ${mdMode === 'CTR' ? 'IV ⊕ {0, Cnt0}' : 'IV'}</span><span>${groupedHex(coreIn0)}</span>`;
+          b1s1.innerHTML = `<span class="muted">Core In = ${mdMode === 'CTR' ? 'IV ⊕ {0, Cnt0+1}' : (mdMode === 'CFB' ? 'C0' : 'O0')}</span><span>${groupedHex(coreIn1)}</span>`;
+          b0cr.innerHTML = `<span>⚙️ ${coreName} (Forward!)</span><strong>${groupedHex(coreOut0)}</strong>`;
+          b1cr.innerHTML = `<span>⚙️ ${coreName} (Forward!)</span><strong>${groupedHex(coreOut1)}</strong>`;
+          b0s3.innerHTML = `<span>P0 = C0 ⊕ KS0</span><strong>${groupedHex(xorArr(c0, coreOut0))}</strong>`;
+          b1s3.innerHTML = `<span>P1 = C1 ⊕ KS1</span><strong>${groupedHex(xorArr(c1, coreOut1))}</strong>`;
+        }
+      }
+
+      const meta = {
+        ECB: {
+          f: 'ECB — C_i = E_K(P_i)  |  P_i = D_K(C_i)',
+          d: 'Stateless block cipher mode (ignores IV). Identical input blocks produce identical ciphertexts (pattern leakage). Useful for single-block key wrapping and core KAT verification.',
+          rtl: `core_in   = block_in;\nblock_out = core_out;\nuse_inv   = (op == DECRYPT);`
+        },
+        CBC: {
+          f: 'CBC — C_i = E_K(P_i ⊕ V_i)  |  P_i = D_K(C_i) ⊕ V_i   (V_0 = IV, V_{i+1} = C_i)',
+          d: 'IV randomizes Block 0 prior to E_K, and each ciphertext C_i chains into the next block. Encryption is strictly sequential; decryption can be pipelined because C_{i-1} is already known!',
+          rtl: `core_in   = enc ? (block_in ^ v_q) : block_in;\nblock_out = enc ? core_out : (core_out ^ v_q);\nv_next    = enc ? core_out : block_in;`
+        },
+        PCBC: {
+          f: 'PCBC — C_i = E_K(P_i ⊕ V_i)  |  V_0 = IV, V_{i+1} = P_i ⊕ C_i',
+          d: 'Propagating CBC chains the XOR of BOTH plaintext and ciphertext (P_i ⊕ C_i) into the chaining register v_q.',
+          rtl: `core_in   = enc ? (block_in ^ v_q) : block_in;\nblock_out = enc ? core_out : (core_out ^ v_q);\nv_next    = block_in ^ block_out; // P_i ^ C_i`
+        },
+        CFB: {
+          f: 'CFB-128 — C_i = P_i ⊕ E_K(V_i)  |  P_i = C_i ⊕ E_K(V_i)   (V_0 = IV, V_{i+1} = C_i)',
+          d: 'Turns forward AES E_K into a self-synchronizing stream cipher. Notice hardware reuse: DECRYPT still runs forward E_K (use_inv = 0) and simply feeds C_i into v_next!',
+          rtl: `core_in   = v_q;       // Always forward E_K!\nblock_out = block_in ^ core_out;\nv_next    = enc ? block_out : block_in; // C_i`
+        },
+        OFB: {
+          f: 'OFB — O_i = E_K(O_{i-1}),  Out_i = In_i ⊕ O_i   (O_{-1} = IV)',
+          d: 'Synchronous stream mode: feeds the AES core output O_i straight back into v_q, completely independent of P_i and C_i. Encrypt and Decrypt datapaths are 100% identical!',
+          rtl: `core_in   = v_q;       // Identical for ENC & DEC!\nblock_out = block_in ^ core_out;\nv_next    = core_out;  // O_i feedback`
+        },
+        CTR: {
+          f: 'CTR — Out_i = In_i ⊕ E_K(IV ⊕ {64\'d0, cnt_q})',
+          d: 'Encrypts a unique per-block counter mixed with IV. Zero inter-block feedback hazard (fully parallelizable / random-access capable), and uses only forward E_K for both Encrypt and Decrypt.',
+          rtl: `core_in   = iv_reg ^ {64'd0, cnt_q};\nblock_out = block_in ^ core_out;\ncnt_next  = cnt_q + 64'd1; // Forward E_K only`
+        }
+      }[mdMode];
+
+      document.getElementById('md-title-formula').textContent = meta.f;
+      document.getElementById('md-desc').textContent = meta.d;
+      document.getElementById('md-rtl-mux').textContent = meta.rtl;
+    }
+
+    document.getElementById('md-op-enc').onclick = () => { mdDecrypt = false; renderModes(); };
+    document.getElementById('md-op-dec').onclick = () => { mdDecrypt = true; renderModes(); };
+    document.getElementById('md-eq-blocks').onclick = () => {
+      activeP1 = activeP0.slice();
+      stimPresetName = 'Custom (P1 = P0)';
+      syncStimulusFields();
+      renderModes();
+    };
+    document.getElementById('md-diff-blocks').onclick = () => {
+      activeP1 = incBytes(activeP0);
+      stimPresetName = 'Custom (P1 != P0)';
+      syncStimulusFields();
+      renderModes();
+    };
+    document.getElementById('md-bump-iv').onclick = () => {
+      activeIv = incBytes(activeIv);
+      stimPresetName = 'Custom (IV + 1)';
+      syncStimulusFields();
+      renderModes();
+    };
+
+    // =========================================================================
+    // MODULE 6: BUS MAPPER CHEAT SHEET
+    // =========================================================================
+    let mapByte = 0;
+    function renderMapper() {
+      const g = document.getElementById('map-grid');
+      g.innerHTML = '<div></div><div class="matrix-hdr">c0 (W0)</div><div class="matrix-hdr">c1 (W1)</div><div class="matrix-hdr">c2 (W2)</div><div class="matrix-hdr">c3 (W3)</div>';
+      for (let r = 0; r < 4; r++) {
+        const rh = document.createElement('div');
+        rh.className = 'matrix-hdr';
+        rh.textContent = `r${r}`;
+        g.appendChild(rh);
+        for (let c = 0; c < 4; c++) {
+          const n = c * 4 + r;
+          const hi = 127 - 8 * n, lo = hi - 7;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `cell-btn ${n === mapByte ? 'selected' : ''}`;
+          btn.innerHTML = `<span>B${n}</span><span class="sub-idx">[${hi}:${lo}]</span>`;
+          btn.onclick = () => { mapByte = n; renderMapper(); };
+          g.appendChild(btn);
+        }
+      }
+      const r = mapByte % 4, c = Math.floor(mapByte / 4);
+      const hi = 127 - 8 * mapByte, lo = hi - 7;
+      document.getElementById('map-detail').innerHTML = `
+        <span>Byte ${mapByte} (Currently 8'h${hex2(activeP0[mapByte])}) → Word ${c} · Row ${r}, Col ${c}</span>
+        <strong>state[${c}][${r}] == bus[${hi}:${lo}]</strong>
+      `;
+    }
+
+    // Initial Synchronization & Render
+    syncStimulusFields();
+    renderAllModules();
+  </script>
+</body>
+
+</html>

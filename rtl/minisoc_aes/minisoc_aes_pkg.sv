@@ -1,8 +1,10 @@
 //=============================================================================
 // Project:     MiniSoC AES — RTL Design Track
 // Package:     minisoc_aes_pkg
-// Description: Common types and state-indexing helpers for the AES-128 block
-//              cipher datapath (FIPS PUB 197, Section 3.4 & Block Guide 7.1).
+// Description: Common types, state-indexing helpers, and GF(2^8) finite-field
+//              arithmetic functions for the AES-128 block cipher datapath
+//              (NIST FIPS PUB 197, Sections 3.4, 4.2, 5.1.3, 5.3.3 &
+//              DV_BlockGuide_MiniSoCAES_v1.0.0 Section 7.1).
 //
 // State Bit-Ordering Convention (128-bit vector):
 //   - Byte 0 is [127:120], ..., Byte 15 is [7:0].
@@ -28,6 +30,69 @@ package minisoc_aes_pkg;
         begin
             mat          = aes_state_t'(state);
             aes_get_byte = mat[c][r];
+        end
+    endfunction
+
+    //-------------------------------------------------------------------------
+    // GF(2^8) Multiplication Helpers modulo m(x) = x^8 + x^4 + x^3 + x + 1
+    // Irreducible polynomial reduction byte: 8'h1b (FIPS-197 Section 4.2.1)
+    //-------------------------------------------------------------------------
+
+    // Multiply by {02} (xtime) in GF(2^8)
+    function automatic logic [7:0] aes_xtime(input logic [7:0] b);
+        begin
+            aes_xtime = {b[6:0], 1'b0} ^ (b[7] ? 8'h1b : 8'h00);
+        end
+    endfunction
+
+    // Multiply by {03} = {02} ^ {01} in GF(2^8)
+    function automatic logic [7:0] aes_gf_mul3(input logic [7:0] b);
+        begin
+            aes_gf_mul3 = aes_xtime(b) ^ b;
+        end
+    endfunction
+
+    // Multiply by {09} = {08} ^ {01} in GF(2^8)
+    function automatic logic [7:0] aes_gf_mul9(input logic [7:0] b);
+        logic [7:0] x2, x4, x8;
+        begin
+            x2          = aes_xtime(b);
+            x4          = aes_xtime(x2);
+            x8          = aes_xtime(x4);
+            aes_gf_mul9 = x8 ^ b;
+        end
+    endfunction
+
+    // Multiply by {0b} = {08} ^ {02} ^ {01} in GF(2^8)
+    function automatic logic [7:0] aes_gf_mul11(input logic [7:0] b);
+        logic [7:0] x2, x4, x8;
+        begin
+            x2           = aes_xtime(b);
+            x4           = aes_xtime(x2);
+            x8           = aes_xtime(x4);
+            aes_gf_mul11 = x8 ^ x2 ^ b;
+        end
+    endfunction
+
+    // Multiply by {0d} = {08} ^ {04} ^ {01} in GF(2^8)
+    function automatic logic [7:0] aes_gf_mul13(input logic [7:0] b);
+        logic [7:0] x2, x4, x8;
+        begin
+            x2           = aes_xtime(b);
+            x4           = aes_xtime(x2);
+            x8           = aes_xtime(x4);
+            aes_gf_mul13 = x8 ^ x4 ^ b;
+        end
+    endfunction
+
+    // Multiply by {0e} = {08} ^ {04} ^ {02} in GF(2^8)
+    function automatic logic [7:0] aes_gf_mul14(input logic [7:0] b);
+        logic [7:0] x2, x4, x8;
+        begin
+            x2           = aes_xtime(b);
+            x4           = aes_xtime(x2);
+            x8           = aes_xtime(x4);
+            aes_gf_mul14 = x8 ^ x4 ^ x2;
         end
     endfunction
 

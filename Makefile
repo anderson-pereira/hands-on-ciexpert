@@ -32,13 +32,22 @@ ENABLE_TOOLS_SCRIPT := $(ROOT_DIR)/utils/enable_tools.sh
 SNPS_ENV            := command -v vlogan >/dev/null 2>&1 || { [ -f $(ENABLE_TOOLS_SCRIPT) ] && source $(ENABLE_TOOLS_SCRIPT) -q; }
 
 # ==========================================
-# PDK Configuration (External Libraries)
+# PDK Configuration (External Libraries - SAED 32nm RVT)
 # ==========================================
-PDK_VERILOG_SRC := /Tools/PDK/SAED32/EDK_Digital/lib/stdcell_rvt/verilog/saed32nm.v
-PDK_DB_SRC      := /Tools/PDK/SAED32/EDK_Digital/lib/stdcell_rvt/db_nldm/saed32rvt_tt1p05v25c.db
+PDK_BASE_DIR    := /Tools/PDK/SAED32/EDK_Digital
+PDK_VERILOG_SRC := $(PDK_BASE_DIR)/lib/stdcell_rvt/verilog/saed32nm.v
+PDK_DB_SRC      := $(PDK_BASE_DIR)/lib/stdcell_rvt/db_nldm/saed32rvt_tt1p05v25c.db
+PDK_TF_SRC      := $(PDK_BASE_DIR)/tech/tf/saed32nm_1p9m.tf
+PDK_NDM_DIR     := $(PDK_BASE_DIR)/lib/stdcell_rvt/ndm
+PDK_NDM_FILES   := saed32rvt_base_frame_timing.ndm \
+                   saed32rvt_pg_frame_timing.ndm \
+                   saed32rvt_dlvl_frame_timing.ndm \
+                   saed32rvt_ulvl_frame_timing.ndm
 
 LIB_VERILOG := $(LIB_DIR)/saed32nm.v
 LIB_DB      := $(LIB_DIR)/saed32rvt_tt1p05v25c.db
+LIB_TF      := $(LIB_DIR)/saed32nm_1p9m.tf
+LIB_NDM     := $(addprefix $(LIB_DIR)/, $(PDK_NDM_FILES))
 
 # ==========================================
 # Files (Supports rtl/ and rtl/minisoc_*/ subdirectories)
@@ -57,6 +66,7 @@ TOP = tb_top
 SYN_SCRIPT = $(SYN_DIR)/synth.tcl
 FM_SCRIPT = $(FM_DIR)/formality.tcl
 UPF_FILE = $(UPF_DIR)/top.upf
+UPF_SCRIPT = $(UPF_DIR)/upf_check.tcl
 
 # ==========================================
 # Flags
@@ -88,7 +98,15 @@ $(LIB_DB): | $(LIB_DIR)
 	@echo "[INFO] Copying PDK Synthesis library (DB)..."
 	cp $(PDK_DB_SRC) $@ || touch $@
 
-prep_libs: $(LIB_VERILOG) $(LIB_DB)
+$(LIB_TF): | $(LIB_DIR)
+	@echo "[INFO] Copying PDK Technology file (TF)..."
+	cp $(PDK_TF_SRC) $@
+
+$(LIB_DIR)/%.ndm: | $(LIB_DIR)
+	@echo "[INFO] Copying PDK NDM reference library ($*.ndm)..."
+	cp -r $(PDK_NDM_DIR)/$*.ndm $@
+
+prep_libs: $(LIB_VERILOG) $(LIB_DB) $(LIB_TF) $(LIB_NDM)
 
 # ==========================================
 # Directory Preparation
@@ -102,7 +120,7 @@ prep_syn: prep_libs
 prep_fm: prep_libs
 	mkdir -p $(FM_OUT)
 
-prep_upf:
+prep_upf: prep_libs
 	mkdir -p $(UPF_OUT)
 
 # ==========================================
@@ -133,6 +151,12 @@ sim_aes_s2: prep_sim_rtl
 	cd $(SIM_RTL_OUT) && $(SNPS_ENV) && vcs $(VCS_FLAGS) -top tb_minisoc_aes_s2 -o simv_aes_s2 -l $(ROOT_DIR)/tb/vcs_aes_s2.log
 	cd $(SIM_RTL_OUT) && $(SNPS_ENV) && ./simv_aes_s2 -l $(ROOT_DIR)/tb/aes_s2_simulation.log
 
+sim_aes_s3: prep_sim_rtl
+	@echo "[INFO] Running MiniSoC AES Week 3 (All Round Transformations) Simulation..."
+	cd $(SIM_RTL_OUT) && $(SNPS_ENV) && vlogan $(VLOGAN_FLAGS) $(RTL_FILES) $(TB_DIR)/tb_minisoc_aes_s3.sv -l $(ROOT_DIR)/tb/compile_aes_s3.log
+	cd $(SIM_RTL_OUT) && $(SNPS_ENV) && vcs $(VCS_FLAGS) -top tb_minisoc_aes_s3 -o simv_aes_s3 -l $(ROOT_DIR)/tb/vcs_aes_s3.log
+	cd $(SIM_RTL_OUT) && $(SNPS_ENV) && ./simv_aes_s3 -l $(ROOT_DIR)/tb/aes_s3_simulation.log
+
 
 # ==========================================
 # Synthesis
@@ -152,8 +176,8 @@ formal: prep_fm
 # UPF Verification
 # ==========================================
 upf_check: prep_upf
-	@echo "[INFO] Static UPF Check placeholder (requires VC Static or equivalent)"
-	cd $(UPF_OUT) && $(SNPS_ENV) && vc_static -upf $(UPF_FILE) -sverilog $(RTL_FILES) -top top | tee $(ROOT_DIR)/upf/upf_static.log || echo "[WARN] vc_static not found, skipping UPF check"
+	@echo "[INFO] Running UPF Check (Fusion Compiler)..."
+	cd $(UPF_OUT) && $(SNPS_ENV) && env ROOT_DIR=$(ROOT_DIR) LIB_TF="$(LIB_TF)" LIB_NDM="$(LIB_NDM)" fc_shell -f $(UPF_SCRIPT) | tee $(ROOT_DIR)/upf/upf_fc.log || echo "[WARN] fc_shell failed or not found, skipping UPF check"
 
 # ==========================================
 # Run All Minimum Flow
@@ -168,7 +192,7 @@ run: all
 # ==========================================
 check_tools:
 	@echo "[INFO] Verificando ferramentas Synopsys..."
-	@$(SNPS_ENV) && which vlogan vcs dc_shell fm_shell 2>/dev/null || echo "[WARN] Algumas ferramentas nao estao no PATH."
+	@$(SNPS_ENV) && which vlogan vcs dc_shell fm_shell fc_shell 2>/dev/null || echo "[WARN] Algumas ferramentas nao estao no PATH."
 
 # ==========================================
 # Clean-up
@@ -181,5 +205,5 @@ clean_libs:
 
 clean_all: clean clean_libs
 
-.PHONY: all prep_libs prep_sim_rtl prep_syn prep_fm prep_upf lint compile sim sim_spi sim_aes_s2 synth formal upf_check run check_tools clean clean_libs clean_all
+.PHONY: all prep_libs prep_sim_rtl prep_syn prep_fm prep_upf lint compile sim sim_spi sim_aes_s2 sim_aes_s3 synth formal upf_check run check_tools clean clean_libs clean_all
 

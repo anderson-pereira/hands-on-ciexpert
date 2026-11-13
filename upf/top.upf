@@ -1,17 +1,33 @@
-# top.upf - Minimum Power Intent configuration for the top design
+# top.upf - Power Intent (UPF 2.1 Supply Sets) para o modulo top
+# Baseado na metodologia Synopsys Fusion Compiler (lab4_reporting)
 
-create_power_domain PD_TOP -include_scope
+# 1. Supply Nets e Supply Set Principal
+create_supply_net VDD
+create_supply_net VSS
+create_supply_set ss_main -function {power VDD} -function {ground VSS}
 
-create_supply_net VDD -domain PD_TOP
-create_supply_net VSS -domain PD_TOP
+# 2. Power Domain de Topo (PD_TOP)
+create_power_domain PD_TOP -include_scope -supply {primary ss_main}
 
-create_supply_port VDD
-create_supply_port VSS
-
+# 3. Supply Ports e Conexoes
+create_supply_port VDD -domain PD_TOP -direction in
+create_supply_port VSS -domain PD_TOP -direction in
 connect_supply_net VDD -ports VDD
 connect_supply_net VSS -ports VSS
 
-set_domain_supply_net PD_TOP -primary_power_net VDD -primary_ground_net VSS
+# 4. Estados de Operacao do Supply Set (SAED 32nm RVT nominal 1.05V / 0.95V + OFF)
+add_power_state -supply ss_main \
+    -state ON_1p05  { -supply_expr { power == {FULL_ON 1.05} && ground == {FULL_ON 0.0} } } \
+    -state ON_0p95  { -supply_expr { power == {FULL_ON 0.95} && ground == {FULL_ON 0.0} } } \
+    -state MAIN_OFF { -supply_expr { power == {OFF}          && ground == {FULL_ON 0.0} } }
 
-set_port_attributes -elements {.} -attribute {VDD}
-set_port_attributes -elements {.} -attribute {VSS}
+# 5. Power State Group (PST)
+create_power_state_group PST
+add_power_state -group PST \
+    -state RUN_1p05  { -logic_expr { ss_main == ON_1p05  } } \
+    -state RUN_0p95  { -logic_expr { ss_main == ON_0p95  } } \
+    -state OFF_STATE { -logic_expr { ss_main == MAIN_OFF } }
+
+# 6. Atributos de Supply das Portas de I/O de top.sv
+set_port_attributes -ports {clk rst_n d} -driver_supply   ss_main
+set_port_attributes -ports {q}           -receiver_supply ss_main

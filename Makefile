@@ -157,6 +157,12 @@ sim_aes_s3: prep_sim_rtl
 	cd $(SIM_RTL_OUT) && $(SNPS_ENV) && vcs $(VCS_FLAGS) -top tb_minisoc_aes_s3 -o simv_aes_s3 -l $(ROOT_DIR)/tb/vcs_aes_s3.log
 	cd $(SIM_RTL_OUT) && $(SNPS_ENV) && ./simv_aes_s3 -l $(ROOT_DIR)/tb/aes_s3_simulation.log
 
+sim_aes_s4: prep_sim_rtl
+	@echo "[INFO] Running MiniSoC AES Week 4 (Key Expansion & AES-128 Datapath) Simulation..."
+	cd $(SIM_RTL_OUT) && $(SNPS_ENV) && vlogan $(VLOGAN_FLAGS) $(RTL_FILES) $(TB_DIR)/tb_minisoc_aes_s4.sv -l $(ROOT_DIR)/tb/compile_aes_s4.log
+	cd $(SIM_RTL_OUT) && $(SNPS_ENV) && vcs $(VCS_FLAGS) -top tb_minisoc_aes_s4 -o simv_aes_s4 -l $(ROOT_DIR)/tb/vcs_aes_s4.log
+	cd $(SIM_RTL_OUT) && $(SNPS_ENV) && ./simv_aes_s4 -l $(ROOT_DIR)/tb/aes_s4_simulation.log
+
 
 # ==========================================
 # Synthesis
@@ -205,5 +211,5 @@ clean_libs:
 
 clean_all: clean clean_libs
 
-.PHONY: all prep_libs prep_sim_rtl prep_syn prep_fm prep_upf lint compile sim sim_spi sim_aes_s2 sim_aes_s3 synth formal upf_check run check_tools clean clean_libs clean_all
+.PHONY: all prep_libs prep_sim_rtl prep_syn prep_fm prep_upf lint compile sim sim_spi sim_aes_s2 sim_aes_s3 sim_aes_s4 synth formal upf_check run check_tools clean clean_libs clean_all
 

@@ -96,4 +96,25 @@ package minisoc_aes_pkg;
         end
     endfunction
 
+    //-------------------------------------------------------------------------
+    // AES-128 Key Expansion Round Constants Rcon[1..10] (FIPS-197 Section 5.2)
+    //-------------------------------------------------------------------------
+    function automatic logic [7:0] aes_rcon(input logic [3:0] round);
+        begin
+            unique case (round)
+                4'd1:    aes_rcon = 8'h01;
+                4'd2:    aes_rcon = 8'h02;
+                4'd3:    aes_rcon = 8'h04;
+                4'd4:    aes_rcon = 8'h08;
+                4'd5:    aes_rcon = 8'h10;
+                4'd6:    aes_rcon = 8'h20;
+                4'd7:    aes_rcon = 8'h40;
+                4'd8:    aes_rcon = 8'h80;
+                4'd9:    aes_rcon = 8'h1b;
+                4'd10:   aes_rcon = 8'h36;
+                default: aes_rcon = 8'h00;
+            endcase
+        end
+    endfunction
+
 endpackage : minisoc_aes_pkg

@@ -5,6 +5,8 @@
 //              - minisoc_aes_key_exp: 128-bit Key Expansion (11 Round Keys)
 //              - minisoc_aes_dp: 128-bit Iterative AES Datapath (Cipher &
 //                Inverse Cipher, 1 round/cycle)
+//              - Connected via SystemVerilog interfaces minisoc_aes_key_exp_if
+//                and minisoc_aes_dp_if using semantic types from minisoc_aes_pkg
 //              - Verification against:
 //                  1. NIST FIPS-197 Appendix A.1 / Appendix B (Key Schedule,
 //                     Cipher & Inverse Cipher, including per-round states)
@@ -29,63 +31,38 @@ module tb_minisoc_aes_s4;
     always #1.0 clk = ~clk;
 
     //-------------------------------------------------------------------------
-    // DUT Signals & Interconnect between minisoc_aes_key_exp and minisoc_aes_dp
+    // SystemVerilog Interfaces & DUT Instantiations
     //-------------------------------------------------------------------------
-    logic         ke_start;
-    logic [127:0] ke_key;
-    logic [3:0]   ke_round_idx;
-    wire  [127:0] ke_round_key;
-    wire          ke_busy;
-    wire          ke_done;
-    wire          ke_valid;
-
-    logic         dp_start;
-    logic         dp_decrypt;
-    logic [127:0] dp_block_in;
-    wire  [3:0]   dp_round_key_idx;
-    wire  [127:0] dp_block_out;
-    wire          dp_busy;
-    wire          dp_done;
+    minisoc_aes_key_exp_if ke_if();
+    minisoc_aes_dp_if      dp_if();
 
     // Allow TB to override round key index during standalone key schedule readback
-    logic         tb_override_rk_idx;
-    logic [3:0]   tb_rk_idx;
+    logic       tb_override_rk_idx;
+    aes_round_t tb_rk_idx;
 
-    assign ke_round_idx = tb_override_rk_idx ? tb_rk_idx : dp_round_key_idx;
+    assign ke_if.round_idx = tb_override_rk_idx ? tb_rk_idx : dp_if.round_key_idx;
+    assign dp_if.round_key = ke_if.round_key;
 
     minisoc_aes_key_exp u_key_exp (
-        .clk         (clk),
-        .rst_n       (rst_n),
-        .i_start     (ke_start),
-        .i_key       (ke_key),
-        .i_round_idx (ke_round_idx),
-        .o_round_key (ke_round_key),
-        .o_busy      (ke_busy),
-        .o_done      (ke_done),
-        .o_valid     (ke_valid)
+        .clk   (clk),
+        .rst_n (rst_n),
+        .ke_if (ke_if.key_exp)
     );
 
     minisoc_aes_dp u_dp (
-        .clk             (clk),
-        .rst_n           (rst_n),
-        .i_start         (dp_start),
-        .i_decrypt       (dp_decrypt),
-        .i_block         (dp_block_in),
-        .i_round_key     (ke_round_key),
-        .o_round_key_idx (dp_round_key_idx),
-        .o_block         (dp_block_out),
-        .o_busy          (dp_busy),
-        .o_done          (dp_done)
+        .clk   (clk),
+        .rst_n (rst_n),
+        .dp_if (dp_if.dp)
     );
 
     //-------------------------------------------------------------------------
     // Reference Vectors — NIST FIPS-197 Appendix B & Appendix A.1
     //-------------------------------------------------------------------------
-    localparam logic [127:0] APP_B_KEY = 128'h2b7e1516_28aed2a6_abf71588_09cf4f3c;
-    localparam logic [127:0] APP_B_PT  = 128'h3243f6a8_885a308d_313198a2_e0370734;
-    localparam logic [127:0] APP_B_CT  = 128'h3925841d_02dc09fb_dc118597_196a0b32;
+    localparam aes_key_t   APP_B_KEY = 128'h2b7e1516_28aed2a6_abf71588_09cf4f3c;
+    localparam aes_block_t APP_B_PT  = 128'h3243f6a8_885a308d_313198a2_e0370734;
+    localparam aes_block_t APP_B_CT  = 128'h3925841d_02dc09fb_dc118597_196a0b32;
 
-    localparam logic [127:0] APP_B_RK [0:10] = '{
+    localparam aes_key_t APP_B_RK [0:10] = '{
         128'h2b7e1516_28aed2a6_abf71588_09cf4f3c, // RoundKey[0]
         128'ha0fafe17_88542cb1_23a33939_2a6c7605, // RoundKey[1]
         128'hf2c295f2_7a96b943_5935807a_7359f67f, // RoundKey[2]
@@ -100,7 +77,7 @@ module tb_minisoc_aes_s4;
     };
 
     // State after AddRoundKey at end of Round 0..10 (FIPS-197 Appendix B)
-    localparam logic [127:0] APP_B_ENC_STATE [0:10] = '{
+    localparam aes_block_t APP_B_ENC_STATE [0:10] = '{
         128'h193de3be_a0f4e22b_9ac68d2a_e9f84808, // After Round 0 AddRoundKey
         128'ha49c7ff2_689f352b_6b5bea43_026a5049, // After Round 1
         128'haa8f5f03_61dde3ef_82d24ad2_6832469a, // After Round 2
@@ -117,11 +94,11 @@ module tb_minisoc_aes_s4;
     //-------------------------------------------------------------------------
     // Reference Vectors — NIST FIPS-197 Appendix C.1 (AES-128)
     //-------------------------------------------------------------------------
-    localparam logic [127:0] APP_C1_KEY = 128'h00010203_04050607_08090a0b_0c0d0e0f;
-    localparam logic [127:0] APP_C1_PT  = 128'h00112233_44556677_8899aabb_ccddeeff;
-    localparam logic [127:0] APP_C1_CT  = 128'h69c4e0d8_6a7b0430_d8cdb780_70b4c55a;
+    localparam aes_key_t   APP_C1_KEY = 128'h00010203_04050607_08090a0b_0c0d0e0f;
+    localparam aes_block_t APP_C1_PT  = 128'h00112233_44556677_8899aabb_ccddeeff;
+    localparam aes_block_t APP_C1_CT  = 128'h69c4e0d8_6a7b0430_d8cdb780_70b4c55a;
 
-    localparam logic [127:0] APP_C1_RK [0:10] = '{
+    localparam aes_key_t APP_C1_RK [0:10] = '{
         128'h00010203_04050607_08090a0b_0c0d0e0f, // RoundKey[0]
         128'hd6aa74fd_d2af72fa_daa678f1_d6ab76fe, // RoundKey[1]
         128'hb692cf0b_643dbdf1_be9bc500_6830b3fe, // RoundKey[2]
@@ -136,7 +113,7 @@ module tb_minisoc_aes_s4;
     };
 
     // Cipher state at end of Round 0..10 (FIPS-197 Appendix C.1, pp. 35-36)
-    localparam logic [127:0] APP_C1_ENC_STATE [0:10] = '{
+    localparam aes_block_t APP_C1_ENC_STATE [0:10] = '{
         128'h00102030_40506070_8090a0b0_c0d0e0f0, // After Round 0
         128'h89d810e8_855ace68_2d1843d8_cb128fe4, // After Round 1
         128'h4915598f_55e5d7a0_daca94fa_1f0a63f7, // After Round 2
@@ -151,7 +128,7 @@ module tb_minisoc_aes_s4;
     };
 
     // Inverse Cipher state at end of Round 0..10 (FIPS-197 Appendix C.1, pp. 36-37)
-    localparam logic [127:0] APP_C1_DEC_STATE [0:10] = '{
+    localparam aes_block_t APP_C1_DEC_STATE [0:10] = '{
         128'h7ad5fda7_89ef4e27_2bca100b_3d9ff59f, // After InvRound 0 (ct ^ RK[10])
         128'h54d990a1_6ba09ab5_96bbf40e_a111702f, // After InvRound 1
         128'h3e1c22c0_b6fcbf76_8da85067_f6170495, // After InvRound 2
@@ -168,14 +145,14 @@ module tb_minisoc_aes_s4;
     //-------------------------------------------------------------------------
     // NIST SP 800-38A Section F.1.1 ECB-AES128 Multi-Block Vectors
     //-------------------------------------------------------------------------
-    localparam logic [127:0] SP800_PT [0:3] = '{
+    localparam aes_block_t SP800_PT [0:3] = '{
         128'h6bc1bee2_2e409f96_e93d7e11_7393172a,
         128'hae2d8a57_1e03ac9c_9eb76fac_45af8e51,
         128'h30c81c46_a35ce411_e5fbc119_1a0a52ef,
         128'hf69f2445_df4f9b17_ad2b417b_e66c3710
     };
 
-    localparam logic [127:0] SP800_CT [0:3] = '{
+    localparam aes_block_t SP800_CT [0:3] = '{
         128'h3ad77bb4_0d7a3660_a89ecaf3_2466ef97,
         128'hf5d3d585_03b9699d_e785895a_96fdbaaf,
         128'h43b1cd7f_598ece23_881b00e3_ed030688,
@@ -189,9 +166,9 @@ module tb_minisoc_aes_s4;
     int error_count;
 
     task automatic check_128(
-        input string        label,
-        input logic [127:0] got,
-        input logic [127:0] expected
+        input string      label,
+        input aes_block_t got,
+        input aes_block_t expected
     );
         begin
             total_checks++;
@@ -202,60 +179,60 @@ module tb_minisoc_aes_s4;
         end
     endtask
 
-    task automatic run_key_expansion(input logic [127:0] key_val);
+    task automatic run_key_expansion(input aes_key_t key_val);
         int cyc;
         begin
             @(negedge clk) begin
-                ke_key   = key_val;
-                ke_start = 1'b1;
+                ke_if.key   = key_val;
+                ke_if.start = 1'b1;
             end
             @(negedge clk) begin
-                ke_start = 1'b0;
+                ke_if.start = 1'b0;
             end
 
             cyc = 0;
-            while (!ke_done && (cyc < 20)) begin
+            while (!ke_if.done && (cyc < 20)) begin
                 @(posedge clk) begin end
                 #0.1 cyc++;
             end
 
             total_checks++;
-            if (!ke_done || !ke_valid || ke_busy || (cyc != 10)) begin
+            if (!ke_if.done || !ke_if.valid || ke_if.busy || (cyc != 10)) begin
                 $display("[ERROR] KeyExpansion timing mismatch: cyc=%0d done=%0b valid=%0b busy=%0b",
-                         cyc, ke_done, ke_valid, ke_busy);
+                         cyc, ke_if.done, ke_if.valid, ke_if.busy);
                 error_count++;
             end
         end
     endtask
 
     task automatic run_dp_block(
-        input  logic         is_decrypt,
-        input  logic [127:0] blk_in,
-        output logic [127:0] blk_out
+        input  logic       is_decrypt,
+        input  aes_block_t blk_in,
+        output aes_block_t blk_out
     );
         int cyc;
         begin
             @(negedge clk) begin
-                dp_decrypt  = is_decrypt;
-                dp_block_in = blk_in;
-                dp_start    = 1'b1;
+                dp_if.decrypt  = is_decrypt;
+                dp_if.block_in = blk_in;
+                dp_if.start    = 1'b1;
             end
             @(negedge clk) begin
-                dp_start = 1'b0;
+                dp_if.start = 1'b0;
             end
 
             cyc = 0;
-            while (!dp_done && (cyc < 20)) begin
+            while (!dp_if.done && (cyc < 20)) begin
                 @(posedge clk) begin end
                 #0.1 cyc++;
             end
 
-            blk_out = dp_block_out;
+            blk_out = dp_if.block_out;
 
             total_checks++;
-            if (!dp_done || dp_busy || (cyc != 10)) begin
+            if (!dp_if.done || dp_if.busy || (cyc != 10)) begin
                 $display("[ERROR] Datapath timing mismatch (decrypt=%0b): cyc=%0d done=%0b busy=%0b",
-                         is_decrypt, cyc, dp_done, dp_busy);
+                         is_decrypt, cyc, dp_if.done, dp_if.busy);
                 error_count++;
             end
         end
@@ -265,22 +242,22 @@ module tb_minisoc_aes_s4;
     // Main Verification Stimulus
     //-------------------------------------------------------------------------
     initial begin
-        logic [127:0] res_block;
-        logic [127:0] enc_block;
-        logic [127:0] dec_block;
-        logic [127:0] rand_key;
-        logic [127:0] rand_pt;
+        aes_block_t res_block;
+        aes_block_t enc_block;
+        aes_block_t dec_block;
+        aes_key_t   rand_key;
+        aes_block_t rand_pt;
 
         total_checks       = 0;
         error_count        = 0;
         rst_n              = 1'b0;
-        ke_start           = 1'b0;
-        ke_key             = 128'd0;
-        dp_start           = 1'b0;
-        dp_decrypt         = 1'b0;
-        dp_block_in        = 128'd0;
+        ke_if.start        = 1'b0;
+        ke_if.key          = '0;
+        dp_if.start        = 1'b0;
+        dp_if.decrypt      = 1'b0;
+        dp_if.block_in     = '0;
         tb_override_rk_idx = 1'b0;
-        tb_rk_idx          = 4'd0;
+        tb_rk_idx          = '0;
 
         repeat (4) @(posedge clk) begin end
         @(negedge clk) rst_n = 1'b1;
@@ -298,30 +275,30 @@ module tb_minisoc_aes_s4;
         // Verify all 11 Round Keys in forward (0..10) and reverse (10..0) order
         tb_override_rk_idx = 1'b1;
         for (int r = 0; r <= 10; r++) begin
-            tb_rk_idx = 4'(r);
-            #0.1 check_128($sformatf("App.B RoundKey[%0d] (fwd)", r), ke_round_key, APP_B_RK[r]);
+            tb_rk_idx = aes_round_t'(r);
+            #0.1 check_128($sformatf("App.B RoundKey[%0d] (fwd)", r), ke_if.round_key, APP_B_RK[r]);
         end
         for (int r = 10; r >= 0; r--) begin
-            tb_rk_idx = 4'(r);
-            #0.1 check_128($sformatf("App.B RoundKey[%0d] (rev)", r), ke_round_key, APP_B_RK[r]);
+            tb_rk_idx = aes_round_t'(r);
+            #0.1 check_128($sformatf("App.B RoundKey[%0d] (rev)", r), ke_if.round_key, APP_B_RK[r]);
         end
         tb_override_rk_idx = 1'b0;
 
         // Run Appendix B Forward Cipher and verify intermediate state at every cycle
         @(negedge clk) begin
-            dp_decrypt  = 1'b0;
-            dp_block_in = APP_B_PT;
-            dp_start    = 1'b1;
+            dp_if.decrypt  = 1'b0;
+            dp_if.block_in = APP_B_PT;
+            dp_if.start    = 1'b1;
         end
         @(posedge clk) begin end
-        #0.1 check_128("App.B Cipher Round 0 state", dp_block_out, APP_B_ENC_STATE[0]);
-        @(negedge clk) dp_start = 1'b0;
+        #0.1 check_128("App.B Cipher Round 0 state", dp_if.block_out, APP_B_ENC_STATE[0]);
+        @(negedge clk) dp_if.start = 1'b0;
 
         for (int r = 1; r <= 10; r++) begin
             @(posedge clk) begin end
-            #0.1 check_128($sformatf("App.B Cipher Round %0d state", r), dp_block_out, APP_B_ENC_STATE[r]);
+            #0.1 check_128($sformatf("App.B Cipher Round %0d state", r), dp_if.block_out, APP_B_ENC_STATE[r]);
         end
-        check_128("App.B Cipher Final Ciphertext", dp_block_out, APP_B_CT);
+        check_128("App.B Cipher Final Ciphertext", dp_if.block_out, APP_B_CT);
 
         // Run Appendix B Inverse Cipher reusing the pre-computed RoundKeys
         run_dp_block(1'b1, APP_B_CT, res_block);
@@ -335,42 +312,42 @@ module tb_minisoc_aes_s4;
 
         tb_override_rk_idx = 1'b1;
         for (int r = 0; r <= 10; r++) begin
-            tb_rk_idx = 4'(r);
-            #0.1 check_128($sformatf("App.C1 RoundKey[%0d]", r), ke_round_key, APP_C1_RK[r]);
+            tb_rk_idx = aes_round_t'(r);
+            #0.1 check_128($sformatf("App.C1 RoundKey[%0d]", r), ke_if.round_key, APP_C1_RK[r]);
         end
         tb_override_rk_idx = 1'b0;
 
         // Run Appendix C.1 Forward Cipher and check every round state (0..10)
         @(negedge clk) begin
-            dp_decrypt  = 1'b0;
-            dp_block_in = APP_C1_PT;
-            dp_start    = 1'b1;
+            dp_if.decrypt  = 1'b0;
+            dp_if.block_in = APP_C1_PT;
+            dp_if.start    = 1'b1;
         end
         @(posedge clk) begin end
-        #0.1 check_128("App.C1 Cipher Round 0 state", dp_block_out, APP_C1_ENC_STATE[0]);
-        @(negedge clk) dp_start = 1'b0;
+        #0.1 check_128("App.C1 Cipher Round 0 state", dp_if.block_out, APP_C1_ENC_STATE[0]);
+        @(negedge clk) dp_if.start = 1'b0;
 
         for (int r = 1; r <= 10; r++) begin
             @(posedge clk) begin end
-            #0.1 check_128($sformatf("App.C1 Cipher Round %0d state", r), dp_block_out, APP_C1_ENC_STATE[r]);
+            #0.1 check_128($sformatf("App.C1 Cipher Round %0d state", r), dp_if.block_out, APP_C1_ENC_STATE[r]);
         end
-        check_128("App.C1 Cipher Final Ciphertext", dp_block_out, APP_C1_CT);
+        check_128("App.C1 Cipher Final Ciphertext", dp_if.block_out, APP_C1_CT);
 
         // Run Appendix C.1 Inverse Cipher and check every round state (0..10)
         @(negedge clk) begin
-            dp_decrypt  = 1'b1;
-            dp_block_in = APP_C1_CT;
-            dp_start    = 1'b1;
+            dp_if.decrypt  = 1'b1;
+            dp_if.block_in = APP_C1_CT;
+            dp_if.start    = 1'b1;
         end
         @(posedge clk) begin end
-        #0.1 check_128("App.C1 InvCipher Round 0 state", dp_block_out, APP_C1_DEC_STATE[0]);
-        @(negedge clk) dp_start = 1'b0;
+        #0.1 check_128("App.C1 InvCipher Round 0 state", dp_if.block_out, APP_C1_DEC_STATE[0]);
+        @(negedge clk) dp_if.start = 1'b0;
 
         for (int r = 1; r <= 10; r++) begin
             @(posedge clk) begin end
-            #0.1 check_128($sformatf("App.C1 InvCipher Round %0d state", r), dp_block_out, APP_C1_DEC_STATE[r]);
+            #0.1 check_128($sformatf("App.C1 InvCipher Round %0d state", r), dp_if.block_out, APP_C1_DEC_STATE[r]);
         end
-        check_128("App.C1 InvCipher Final Plaintext", dp_block_out, APP_C1_PT);
+        check_128("App.C1 InvCipher Final Plaintext", dp_if.block_out, APP_C1_PT);
 
         //=====================================================================
         // 3. NIST SP 800-38A F.1.1 Multi-Block ECB Encryption & Decryption

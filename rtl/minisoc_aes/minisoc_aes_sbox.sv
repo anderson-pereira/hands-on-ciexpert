@@ -7,9 +7,9 @@
 //              in SAED 32nm).
 //=============================================================================
 
-module minisoc_aes_sbox (
-    input  logic [7:0] i_byte,
-    output logic [7:0] o_byte
+module minisoc_aes_sbox import minisoc_aes_pkg::*; (
+    input  aes_byte_t i_byte,
+    output aes_byte_t o_byte
 );
 
     always_comb begin

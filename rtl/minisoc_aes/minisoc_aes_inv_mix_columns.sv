@@ -11,8 +11,8 @@
 //=============================================================================
 
 module minisoc_aes_inv_mix_columns import minisoc_aes_pkg::*; (
-    input  logic [127:0] i_state,
-    output logic [127:0] o_state
+    input  aes_block_t i_state,
+    output aes_block_t o_state
 );
 
     aes_state_t s_in;

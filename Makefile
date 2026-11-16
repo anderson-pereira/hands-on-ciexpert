@@ -163,6 +163,9 @@ sim_aes_s4: prep_sim_rtl
 	cd $(SIM_RTL_OUT) && $(SNPS_ENV) && vcs $(VCS_FLAGS) -top tb_minisoc_aes_s4 -o simv_aes_s4 -l $(ROOT_DIR)/tb/vcs_aes_s4.log
 	cd $(SIM_RTL_OUT) && $(SNPS_ENV) && ./simv_aes_s4 -l $(ROOT_DIR)/tb/aes_s4_simulation.log
 
+sim_aes_all: sim_aes_s2 sim_aes_s3 sim_aes_s4
+	@echo "[INFO] All MiniSoC AES simulations (Weeks 2, 3, and 4) completed successfully!"
+
 
 # ==========================================
 # Synthesis
@@ -211,5 +214,5 @@ clean_libs:
 
 clean_all: clean clean_libs
 
-.PHONY: all prep_libs prep_sim_rtl prep_syn prep_fm prep_upf lint compile sim sim_spi sim_aes_s2 sim_aes_s3 sim_aes_s4 synth formal upf_check run check_tools clean clean_libs clean_all
+.PHONY: all prep_libs prep_sim_rtl prep_syn prep_fm prep_upf lint compile sim sim_spi sim_aes_s2 sim_aes_s3 sim_aes_s4 sim_aes_all synth formal upf_check run check_tools clean clean_libs clean_all
 

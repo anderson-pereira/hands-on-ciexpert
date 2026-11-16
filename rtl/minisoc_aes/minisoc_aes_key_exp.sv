@@ -19,75 +19,70 @@
 //      inverse key schedule datapath. Furthermore, because MiniSoC AES
 //      processes 1 to 256 blocks per START command under a constant 128-bit
 //      key, computing and caching RoundKey[0..10] once at the start of the
-//      operation (in 10 cycles) provides zero-latency random access in both
+//      operation (10 cycles) provides zero-latency random access in both
 //      forward (0..10) and reverse (10..0) orders while completely freezing
 //      key-schedule switching activity during block processing.
 //=============================================================================
 
 module minisoc_aes_key_exp import minisoc_aes_pkg::*; (
-    input  logic         clk,
-    input  logic         rst_n,
-    input  logic         i_start,
-    input  logic [127:0] i_key,
-    input  logic [3:0]   i_round_idx,
-    output logic [127:0] o_round_key,
-    output logic         o_busy,
-    output logic         o_done,
-    output logic         o_valid
+    input  logic                   clk,
+    input  logic                   rst_n,
+    minisoc_aes_key_exp_if.key_exp ke_if
 );
 
     //-------------------------------------------------------------------------
     // Storage for 11 Round Keys: rk_mem[0] (Cipher Key) .. rk_mem[10]
     //-------------------------------------------------------------------------
-    logic [127:0] rk_mem [0:10];
+    aes_key_t   rk_mem [0:AES_NUM_RKEYS-1];
 
-    logic [3:0]   round_q;
-    logic         busy_q;
-    logic         done_q;
-    logic         valid_q;
+    aes_round_t round_q;
+    logic       busy_q;
+    logic       done_q;
+    logic       valid_q;
 
     //-------------------------------------------------------------------------
     // Single-Round Combinational Key Schedule Step (FIPS-197 Section 5.2)
+    // Uses structured packed types (aes_words128_t, aes_word_bytes_t) to avoid
+    // manual bit-slice indexing.
     //-------------------------------------------------------------------------
-    logic [127:0] prev_rk;
-    logic [31:0]  w0, w1, w2, w3;
-    logic [31:0]  rot_w3;
-    logic [31:0]  sub_w3;
-    logic [31:0]  rcon_w;
-    logic [31:0]  w0_next, w1_next, w2_next, w3_next;
-    logic [127:0] next_rk;
+    aes_key_t        prev_rk;
+    aes_words128_t   prev_rk_w;
+    aes_words128_t   next_rk_w;
+    aes_word_bytes_t w3_bytes;
+    aes_word_bytes_t rot_w3_bytes;
+    aes_word_bytes_t sub_w3_bytes;
+    aes_word_t       rcon_w;
+    aes_key_t        next_rk;
 
     // Select previous round key rk_mem[round_q - 1] only when busy (operand isolation)
     always_comb begin
-        if (busy_q && (round_q >= 4'd1) && (round_q <= 4'd10)) begin
+        if (busy_q && (round_q >= 4'd1) && (round_q <= AES_NUM_ROUNDS)) begin
             prev_rk = rk_mem[round_q - 4'd1];
         end else begin
-            prev_rk = 128'd0;
+            prev_rk = '0;
         end
 
-        w0     = prev_rk[127:96];
-        w1     = prev_rk[95:64];
-        w2     = prev_rk[63:32];
-        w3     = prev_rk[31:0];
+        prev_rk_w = aes_words128_t'(prev_rk);
+        w3_bytes  = aes_word_bytes_t'(prev_rk_w[3]);
 
         // RotWord(w3): cyclic left byte shift [a0, a1, a2, a3] -> [a1, a2, a3, a0]
-        rot_w3 = {w3[23:0], w3[31:24]};
-        rcon_w = {aes_rcon(round_q), 24'h00_0000};
+        rot_w3_bytes = {w3_bytes[1], w3_bytes[2], w3_bytes[3], w3_bytes[0]};
+        rcon_w       = {aes_rcon(round_q), 24'h00_0000};
 
         // Word recurrence: w[i] = w[i-4] ^ temp
-        w0_next = w0 ^ sub_w3 ^ rcon_w;
-        w1_next = w1 ^ w0_next;
-        w2_next = w2 ^ w1_next;
-        w3_next = w3 ^ w2_next;
+        next_rk_w[0] = prev_rk_w[0] ^ aes_word_t'(sub_w3_bytes) ^ rcon_w;
+        next_rk_w[1] = prev_rk_w[1] ^ next_rk_w[0];
+        next_rk_w[2] = prev_rk_w[2] ^ next_rk_w[1];
+        next_rk_w[3] = prev_rk_w[3] ^ next_rk_w[2];
 
-        next_rk = {w0_next, w1_next, w2_next, w3_next};
+        next_rk = aes_key_t'(next_rk_w);
     end
 
     // SubWord(RotWord(w3)) using 4 parallel S-Box instances
     for (genvar b = 0; b < 4; b++) begin : g_subword
         minisoc_aes_sbox u_sbox_kw (
-            .i_byte (rot_w3[8*b +: 8]),
-            .o_byte (sub_w3[8*b +: 8])
+            .i_byte (rot_w3_bytes[b]),
+            .o_byte (sub_w3_bytes[b])
         );
     end
 
@@ -96,25 +91,25 @@ module minisoc_aes_key_exp import minisoc_aes_pkg::*; (
     //-------------------------------------------------------------------------
     always_ff @(posedge clk) begin
         if (!rst_n) begin
-            for (int k = 0; k < 11; k++) begin
-                rk_mem[k] <= 128'd0;
+            for (int k = 0; k < AES_NUM_RKEYS; k++) begin
+                rk_mem[k] <= '0;
             end
-            round_q <= 4'd0;
+            round_q <= '0;
             busy_q  <= 1'b0;
             done_q  <= 1'b0;
             valid_q <= 1'b0;
         end else begin
             done_q <= 1'b0;
 
-            if (i_start) begin
-                rk_mem[0] <= i_key;
+            if (ke_if.start) begin
+                rk_mem[0] <= ke_if.key;
                 round_q   <= 4'd1;
                 busy_q    <= 1'b1;
                 valid_q   <= 1'b0;
             end else if (busy_q) begin
                 rk_mem[round_q] <= next_rk;
 
-                if (round_q == 4'd10) begin
+                if (round_q == AES_NUM_ROUNDS) begin
                     busy_q  <= 1'b0;
                     done_q  <= 1'b1;
                     valid_q <= 1'b1;
@@ -129,16 +124,15 @@ module minisoc_aes_key_exp import minisoc_aes_pkg::*; (
     // Combinational Read Port for RoundKey[0..10]
     //-------------------------------------------------------------------------
     always_comb begin
-        if (i_round_idx <= 4'd10) begin
-            o_round_key = rk_mem[i_round_idx];
+        if (ke_if.round_idx <= AES_NUM_ROUNDS) begin
+            ke_if.round_key = rk_mem[ke_if.round_idx];
         end else begin
-            o_round_key = 128'd0;
+            ke_if.round_key = '0;
         end
     end
 
-    assign o_busy  = busy_q;
-    assign o_done  = done_q;
-    assign o_valid = valid_q;
+    assign ke_if.busy  = busy_q;
+    assign ke_if.done  = done_q;
+    assign ke_if.valid = valid_q;
 
 endmodule : minisoc_aes_key_exp
-
